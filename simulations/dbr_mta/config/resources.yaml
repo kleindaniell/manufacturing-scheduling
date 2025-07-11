@@ -1,0 +1,216 @@
+r01:
+  quantity: 1
+  tbf:
+    dist: gamma
+    params:
+      - 7200
+      - 1440
+  ttr:
+    dist: gamma
+    params:
+      - 4
+      - 2
+  setup:
+    dist: constant
+    params:
+      - 0
+r02:
+  quantity: 1
+  tbf:
+    dist: gamma
+    params:
+      - 7200
+      - 1440
+  ttr:
+    dist: gamma
+    params:
+      - 4
+      - 2
+  setup:
+    dist: constant
+    params:
+      - 0
+r03:
+  quantity: 1
+  tbf:
+    dist: gamma
+    params:
+      - 7200
+      - 1440
+  ttr:
+    dist: gamma
+    params:
+      - 4
+      - 2
+  setup:
+    dist: gamma
+    params:
+      - 0.2
+      - 0.1
+r04:
+  quantity: 1
+  tbf:
+    dist: gamma
+    params:
+      - 7200
+      - 1440
+  ttr:
+    dist: gamma
+    params:
+      - 4
+      - 2
+  setup:
+    dist: gamma
+    params:
+      - 0.2
+      - 0.1
+r05:
+  quantity: 1
+  tbf:
+    dist: gamma
+    params:
+      - 7200
+      - 1440
+  ttr:
+    dist: gamma
+    params:
+      - 4
+      - 2
+  setup:
+    dist: gamma
+    params:
+      - 0.2
+      - 0.1
+r06:
+  quantity: 1
+  tbf:
+    dist: gamma
+    params:
+      - 7200
+      - 1440
+  ttr:
+    dist: gamma
+    params:
+      - 4
+      - 2
+  setup:
+    dist: gamma
+    params:
+      - 0.2
+      - 0.1
+r07:
+  quantity: 1
+  tbf:
+    dist: gamma
+    params:
+      - 7200
+      - 1440
+  ttr:
+    dist: gamma
+    params:
+      - 4
+      - 2
+  setup:
+    dist: constant
+    params:
+      - 0
+r08:
+  quantity: 1
+  tbf:
+    dist: gamma
+    params:
+      - 7200
+      - 1440
+  ttr:
+    dist: gamma
+    params:
+      - 4
+      - 2
+  setup:
+    dist: gamma
+    params:
+      - 0.2
+      - 0.1
+r09:
+  quantity: 1
+  tbf:
+    dist: gamma
+    params:
+      - 7200
+      - 1440
+  ttr:
+    dist: gamma
+    params:
+      - 8
+      - 2
+  setup:
+    dist: gamma
+    params:
+      - 0.5
+      - 0.1
+r10:
+  quantity: 1
+  tbf:
+    dist: gamma
+    params:
+      - 7200
+      - 1440
+  ttr:
+    dist: gamma
+    params:
+      - 4
+      - 2
+  setup:
+    dist: gamma
+    params:
+      - 0.2
+      - 0.1
+r11:
+  quantity: 1
+  tbf:
+    dist: gamma
+    params:
+      - 7200
+      - 1440
+  ttr:
+    dist: gamma
+    params:
+      - 4
+      - 2
+  setup:
+    dist: gamma
+    params:
+      - 0.2
+      - 0.1
+r12:
+  quantity: 1
+  tbf:
+    dist: gamma
+    params:
+      - 7200
+      - 1440
+  ttr:
+    dist: gamma
+    params:
+      - 4
+      - 2
+  setup:
+    dist: constant
+    params:
+      - 0
+r13:
+  quantity: 1
+  tbf:
+    dist: gamma
+    params:
+      - 7200
+      - 1440
+  ttr:
+    dist: gamma
+    params:
+      - 4
+      - 2
+  setup:
+    dist: constant
+    params:
+      - 0

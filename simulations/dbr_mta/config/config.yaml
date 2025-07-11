@@ -1,0 +1,16 @@
+# Simulation config
+run_until: 200001
+warmup: 10000
+log_interval: 24
+save_queues: True
+monitor_warmup: 0
+monitor_interval: 50000
+# Factory config
+delivery_mode: "instantly"
+# Scheduler config
+scheduler_interval: 48
+order_release_limit: .inf
+ccr_release_limit: False
+cb_target_level: 400
+sb_update: True
+

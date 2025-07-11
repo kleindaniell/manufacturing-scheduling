@@ -1,0 +1,1047 @@
+produto01:
+  final_process: p1-07
+  raw_material: p1-0
+  lot_size_min: 1
+  shipping_buffer: 74
+  processes:
+    p1-01:
+      deps:
+      - p1-0
+      processing_time:
+        dist: gamma
+        params:
+        - 0.78
+        - 0.45
+      resource: r01
+    p1-02:
+      deps:
+      - p1-01
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p1-03:
+      deps:
+      - p1-02
+      processing_time:
+        dist: gamma
+        params:
+        - 1.057
+        - 1.057
+      resource: r04
+    p1-04:
+      deps:
+      - p1-03
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p1-05:
+      deps:
+      - p1-04
+      processing_time:
+        dist: gamma
+        params:
+        - 1.175
+        - 0.831
+      resource: r09
+    p1-06:
+      deps:
+      - p1-05
+      processing_time:
+        dist: gamma
+        params:
+        - 1.8
+        - 1.039
+      resource: r10
+    p1-07:
+      deps:
+      - p1-06
+      processing_time:
+        dist: gamma
+        params:
+        - 1.44
+        - 1.44
+      resource: r11
+  demand:
+    duedate:
+      dist: constant
+      params:
+      - 61
+    freq:
+      dist: erlang
+      params:
+      - 10
+      - 5.77
+      - 3
+    quantity:
+      dist: constant
+      params:
+      - 1
+produto02:
+  final_process: p2-08
+  raw_material: p2-0
+  lot_size_min: 1
+  shipping_buffer: 84
+  processes:
+    p2-01:
+      deps:
+      - p2-0
+      processing_time:
+        dist: gamma
+        params:
+        - 0.78
+        - 0.45
+      resource: r01
+    p2-02:
+      deps:
+      - p2-01
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p2-03:
+      deps:
+      - p2-02
+      processing_time:
+        dist: gamma
+        params:
+        - 2.0
+        - 1.155
+      resource: r05
+    p2-04:
+      deps:
+      - p2-03
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p2-05:
+      deps:
+      - p2-04
+      processing_time:
+        dist: gamma
+        params:
+        - 1.875
+        - 1.083
+      resource: r08
+    p2-06:
+      deps:
+      - p2-05
+      processing_time:
+        dist: gamma
+        params:
+        - 1.175
+        - 0.831
+      resource: r09
+    p2-07:
+      deps:
+      - p2-06
+      processing_time:
+        dist: gamma
+        params:
+        - 1.8
+        - 1.039
+      resource: r10
+    p2-08:
+      deps:
+      - p2-07
+      processing_time:
+        dist: gamma
+        params:
+        - 1.44
+        - 1.44
+      resource: r11
+  demand:
+    duedate:
+      dist: constant
+      params:
+      - 61
+    freq:
+      dist: erlang
+      params:
+      - 10
+      - 7.07
+      - 2
+    quantity:
+      dist: constant
+      params:
+      - 1
+produto03:
+  final_process: p3-08
+  raw_material: p3-0
+  lot_size_min: 1
+  shipping_buffer: 77
+  processes:
+    p3-01:
+      deps:
+      - p3-0
+      processing_time:
+        dist: gamma
+        params:
+        - 0.78
+        - 0.45
+      resource: r01
+    p3-02:
+      deps:
+      - p3-01
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p3-03:
+      deps:
+      - p3-02
+      processing_time:
+        dist: gamma
+        params:
+        - 1.400
+        - 0.7
+      resource: r06
+    p3-04:
+      deps:
+      - p3-03
+      processing_time:
+        dist: gamma
+        params:
+        - 1.057
+        - 1.057
+      resource: r04
+    p3-05:
+      deps:
+      - p3-04
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p3-06:
+      deps:
+      - p3-05
+      processing_time:
+        dist: gamma
+        params:
+        - 1.175
+        - 0.831
+      resource: r09
+    p3-07:
+      deps:
+      - p3-06
+      processing_time:
+        dist: gamma
+        params:
+        - 1.157
+        - 0.579
+      resource: r12
+    p3-08:
+      deps:
+      - p3-07
+      processing_time:
+        dist: gamma
+        params:
+        - 1.44
+        - 1.44
+      resource: r11
+  demand:
+    duedate:
+      dist: constant
+      params:
+      - 61
+    freq:
+      dist: uniform
+      params:
+      - 10
+      - 5.77
+      - 0
+    quantity:
+      dist: constant
+      params:
+      - 1
+produto04:
+  final_process: p4-08
+  raw_material: p4-0
+  lot_size_min: 1
+  shipping_buffer: 79
+  processes:
+    p4-01:
+      deps:
+      - p4-0
+      processing_time:
+        dist: gamma
+        params:
+        - 0.78
+        - 0.45
+      resource: r01
+    p4-02:
+      deps:
+      - p4-01
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p4-03:
+      deps:
+      - p4-02
+      processing_time:
+        dist: gamma
+        params:
+        - 1.775
+        - 1.025
+      resource: r07
+    p4-04:
+      deps:
+      - p4-03
+      processing_time:
+        dist: gamma
+        params:
+        - 1.057
+        - 1.057
+      resource: r04
+    p4-05:
+      deps:
+      - p4-04
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p4-06:
+      deps:
+      - p4-05
+      processing_time:
+        dist: gamma
+        params:
+        - 1.175
+        - 0.831
+      resource: r09
+    p4-07:
+      deps:
+      - p4-06
+      processing_time:
+        dist: gamma
+        params:
+        - 1.8
+        - 1.039
+      resource: r10
+    p4-08:
+      deps:
+      - p4-07
+      processing_time:
+        dist: gamma
+        params:
+        - 1.44
+        - 1.44
+      resource: r11
+  demand:
+    duedate:
+      dist: constant
+      params:
+      - 61
+    freq:
+      dist: erlang
+      params:
+      - 10
+      - 5.77
+      - 3
+    quantity:
+      dist: constant
+      params:
+      - 1
+produto05:
+  final_process: p5-08
+  raw_material: p5-0
+  lot_size_min: 1
+  shipping_buffer: 76
+  processes:
+    p5-01:
+      deps:
+      - p5-0
+      processing_time:
+        dist: gamma
+        params:
+        - 0.78
+        - 0.45
+      resource: r01
+    p5-02:
+      deps:
+      - p5-01
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p5-03:
+      deps:
+      - p5-02
+      processing_time:
+        dist: gamma
+        params:
+        - 1.057
+        - 1.057
+      resource: r04
+    p5-04:
+      deps:
+      - p5-03
+      processing_time:
+        dist: gamma
+        params:
+        - 1.157
+        - 0.579
+      resource: r12
+    p5-05:
+      deps:
+      - p5-04
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p5-06:
+      deps:
+      - p5-05
+      processing_time:
+        dist: gamma
+        params:
+        - 1.175
+        - 0.831
+      resource: r09
+    p5-07:
+      deps:
+      - p5-06
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p5-08:
+      deps:
+      - p5-07
+      processing_time:
+        dist: gamma
+        params:
+        - 1.45
+        - 0.837
+      resource: r13
+  demand:
+    duedate:
+      dist: constant
+      params:
+      - 61
+    freq:
+      dist: erlang
+      params:
+      - 10
+      - 5.0
+      - 4
+    quantity:
+      dist: constant
+      params:
+      - 1
+produto06:
+  final_process: p6-08
+  raw_material: p6-0
+  lot_size_min: 1
+  shipping_buffer: 88
+  processes:
+    p6-01:
+      deps:
+      - p6-0
+      processing_time:
+        dist: gamma
+        params:
+        - 0.78
+        - 0.45
+      resource: r01
+    p6-02:
+      deps:
+      - p6-01
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p6-03:
+      deps:
+      - p6-02
+      processing_time:
+        dist: gamma
+        params:
+        - 2.0
+        - 1.155
+      resource: r05
+    p6-04:
+      deps:
+      - p6-03
+      processing_time:
+        dist: gamma
+        params:
+        - 1.157
+        - 0.579
+      resource: r12
+    p6-05:
+      deps:
+      - p6-04
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p6-06:
+      deps:
+      - p6-05
+      processing_time:
+        dist: gamma
+        params:
+        - 1.175
+        - 0.831
+      resource: r09
+    p6-07:
+      deps:
+      - p6-06
+      processing_time:
+        dist: gamma
+        params:
+        - 1.775
+        - 1.025
+      resource: r07
+    p6-08:
+      deps:
+      - p6-07
+      processing_time:
+        dist: gamma
+        params:
+        - 1.45
+        - 0.837
+      resource: r13
+  demand:
+    duedate:
+      dist: constant
+      params:
+      - 61
+    freq:
+      dist: erlang
+      params:
+      - 10
+      - 7.07
+      - 2
+    quantity:
+      dist: constant
+      params:
+      - 1
+produto07:
+  final_process: p7-08
+  raw_material: p7-0
+  lot_size_min: 1
+  shipping_buffer: 69
+  processes:
+    p7-01:
+      deps:
+      - p7-0
+      processing_time:
+        dist: gamma
+        params:
+        - 0.78
+        - 0.45
+      resource: r01
+    p7-02:
+      deps:
+      - p7-01
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p7-03:
+      deps:
+      - p7-02
+      processing_time:
+        dist: gamma
+        params:
+        - 1.775
+        - 1.025
+      resource: r07
+    p7-04:
+      deps:
+      - p7-03
+      processing_time:
+        dist: gamma
+        params:
+        - 1.157
+        - 0.579
+      resource: r12
+    p7-05:
+      deps:
+      - p7-04
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p7-06:
+      deps:
+      - p7-05
+      processing_time:
+        dist: gamma
+        params:
+        - 1.875
+        - 1.083
+      resource: r08
+    p7-07:
+      deps:
+      - p7-06
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p7-08:
+      deps:
+      - p7-07
+      processing_time:
+        dist: gamma
+        params:
+        - 1.45
+        - 0.837
+      resource: r13
+  demand:
+    duedate:
+      dist: constant
+      params:
+      - 61
+    freq:
+      dist: erlang
+      params:
+      - 10
+      - 5.0
+      - 4
+    quantity:
+      dist: constant
+      params:
+      - 1
+produto08:
+  final_process: p8-12
+  raw_material: p8-0
+  lot_size_min: 1
+  shipping_buffer: 105
+  processes:
+    p8-01:
+      deps:
+      - p8-0
+      processing_time:
+        dist: gamma
+        params:
+        - 0.78
+        - 0.45
+      resource: r01
+    p8-02:
+      deps:
+      - p8-01
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p8-03:
+      deps:
+      - p8-02
+      processing_time:
+        dist: gamma
+        params:
+        - 2.667
+        - 1.885
+      resource: r03
+    p8-04:
+      deps:
+      - p8-03
+      processing_time:
+        dist: gamma
+        params:
+        - 1.775
+        - 1.025
+      resource: r07
+    p8-05:
+      deps:
+      - p8-04
+      processing_time:
+        dist: gamma
+        params:
+        - 1.057
+        - 1.057
+      resource: r04
+    p8-06:
+      deps:
+      - p8-05
+      processing_time:
+        dist: gamma
+        params:
+        - 1.157
+        - 0.579
+      resource: r12
+    p8-07:
+      deps:
+      - p8-06
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p8-08:
+      deps:
+      - p8-07
+      processing_time:
+        dist: gamma
+        params:
+        - 1.875
+        - 1.083
+      resource: r08
+    p8-09:
+      deps:
+      - p8-08
+      processing_time:
+        dist: gamma
+        params:
+        - 1.400
+        - 0.7
+      resource: r06
+    p8-10:
+      deps:
+      - p8-09
+      processing_time:
+        dist: gamma
+        params:
+        - 1.175
+        - 0.831
+      resource: r09
+    p8-11:
+      deps:
+      - p8-10
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p8-12:
+      deps:
+      - p8-11
+      processing_time:
+        dist: gamma
+        params:
+        - 1.45
+        - 0.837
+      resource: r13
+  demand:
+    duedate:
+      dist: constant
+      params:
+      - 61
+    freq:
+      dist: uniform
+      params:
+      - 10
+      - 5.77
+      - 0
+    quantity:
+      dist: constant
+      params:
+      - 1
+produto09:
+  final_process: p9-13
+  raw_material: p9-0
+  lot_size_min: 1
+  shipping_buffer: 89
+  processes:
+    p9-01:
+      deps:
+      - p9-0
+      processing_time:
+        dist: gamma
+        params:
+        - 0.78
+        - 0.45
+      resource: r01
+    p9-02:
+      deps:
+      - p9-01
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p9-03:
+      deps:
+      - p9-02
+      processing_time:
+        dist: gamma
+        params:
+        - 2.667
+        - 1.885
+      resource: r03
+    p9-04:
+      deps:
+      - p9-03
+      processing_time:
+        dist: gamma
+        params:
+        - 2.0
+        - 1.155
+      resource: r05
+    p9-05:
+      deps:
+      - p9-04
+      processing_time:
+        dist: gamma
+        params:
+        - 1.057
+        - 1.057
+      resource: r04
+    p9-06:
+      deps:
+      - p9-05
+      processing_time:
+        dist: gamma
+        params:
+        - 1.400
+        - 0.7
+      resource: r06
+    p9-07:
+      deps:
+      - p9-06
+      processing_time:
+        dist: gamma
+        params:
+        - 1.157
+        - 0.579
+      resource: r12
+    p9-08:
+      deps:
+      - p9-07
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p9-09:
+      deps:
+      - p9-08
+      processing_time:
+        dist: gamma
+        params:
+        - 1.875
+        - 1.083
+      resource: r08
+    p9-10:
+      deps:
+      - p9-09
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p9-11:
+      deps:
+      - p9-10
+      processing_time:
+        dist: gamma
+        params:
+        - 1.8
+        - 1.039
+      resource: r10
+    p9-12:
+      deps:
+      - p9-11
+      processing_time:
+        dist: gamma
+        params:
+        - 1.400
+        - 0.7
+      resource: r06
+    p9-13:
+      deps:
+      - p9-12
+      processing_time:
+        dist: gamma
+        params:
+        - 1.45
+        - 0.837
+      resource: r13
+  demand:
+    duedate:
+      dist: constant
+      params:
+      - 61
+    freq:
+      dist: erlang
+      params:
+      - 10
+      - 5.0
+      - 4
+    quantity:
+      dist: constant
+      params:
+      - 1
+produto10:
+  final_process: p10-13
+  raw_material: p10-0
+  lot_size_min: 1
+  shipping_buffer: 113
+  processes:
+    p10-01:
+      deps:
+      - p10-0
+      processing_time:
+        dist: gamma
+        params:
+        - 0.78
+        - 0.45
+      resource: r01
+    p10-10:
+      deps:
+      - p10-09
+      processing_time:
+        dist: gamma
+        params:
+        - 1.175
+        - 0.831
+      resource: r09
+    p10-11:
+      deps:
+      - p10-10
+      processing_time:
+        dist: gamma
+        params:
+        - 1.44
+        - 1.44
+      resource: r11
+    p10-12:
+      deps:
+      - p10-11
+      processing_time:
+        dist: gamma
+        params:
+        - 2.0
+        - 1.155
+      resource: r05
+    p10-13:
+      deps:
+      - p10-12
+      processing_time:
+        dist: gamma
+        params:
+        - 1.45
+        - 0.837
+      resource: r13
+    p10-02:
+      deps:
+      - p10-01
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p10-03:
+      deps:
+      - p10-02
+      processing_time:
+        dist: gamma
+        params:
+        - 2.667
+        - 1.885
+      resource: r03
+    p10-04:
+      deps:
+      - p10-03
+      processing_time:
+        dist: gamma
+        params:
+        - 1.400
+        - 0.7
+      resource: r06
+    p10-05:
+      deps:
+      - p10-04
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+    p10-06:
+      deps:
+      - p10-05
+      processing_time:
+        dist: gamma
+        params:
+        - 1.057
+        - 1.057
+      resource: r04
+    p10-07:
+      deps:
+      - p10-06
+      processing_time:
+        dist: gamma
+        params:
+        - 1.157
+        - 0.579
+      resource: r12
+    p10-08:
+      deps:
+      - p10-07
+      processing_time:
+        dist: gamma
+        params:
+        - 1.775
+        - 1.025
+      resource: r07
+    p10-09:
+      deps:
+      - p10-08
+      processing_time:
+        dist: gamma
+        params:
+        - 0.363
+        - 0.209
+      resource: r02
+  demand:
+    duedate:
+      dist: constant
+      params:
+      - 61
+    freq:
+      dist: erlang
+      params:
+      - 10
+      - 7.07
+      - 2
+    quantity:
+      dist: constant
+      params:
+      - 1
