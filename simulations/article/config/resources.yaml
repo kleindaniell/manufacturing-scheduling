@@ -1,0 +1,221 @@
+r01:
+  quantity: 1
+  # tbf:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  # ttr:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  setup:
+    dist: constant
+    params:
+      - 0
+      - 0
+r02:
+  quantity: 1
+  # tbf:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  # ttr:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  setup:
+    dist: constant
+    params:
+      - 0
+      - 0
+r03:
+  quantity: 1
+  # tbf:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  # ttr:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  setup:
+    dist: constant
+    params:
+      - 0
+      - 0
+r04:
+  quantity: 1
+  # tbf:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  # ttr:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  setup:
+    dist: constant
+    params:
+      - 0
+      - 0
+r05:
+  quantity: 1
+  # tbf:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  # ttr:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  setup:
+    dist: constant
+    params:
+      - 0
+      - 0
+r06:
+  quantity: 1
+  # tbf:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  # ttr:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  setup:
+    dist: constant
+    params:
+      - 0
+      - 0
+r07:
+  quantity: 1
+  # tbf:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  # ttr:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  setup:
+    dist: constant
+    params:
+      - 0
+      - 0
+r08:
+  quantity: 1
+  # tbf:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  # ttr:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  setup:
+    dist: constant
+    params:
+      - 0
+      - 0
+r09:
+  quantity: 1
+  # tbf:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  # ttr:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  setup:
+    dist: constant
+    params:
+      - 0
+      - 0
+r10:
+  quantity: 1
+  # tbf:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  # ttr:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  setup:
+    dist: constant
+    params:
+      - 0
+      - 0
+r11:
+  quantity: 1
+  # tbf:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  # ttr:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  setup:
+    dist: constant
+    params:
+      - 0
+      - 0
+r12:
+  quantity: 1
+  # tbf:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  # ttr:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  setup:
+    dist: constant
+    params:
+      - 0
+      - 0
+r13:
+  quantity: 1
+  # tbf:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  # ttr:
+  #   dist: constant
+  #   params:
+  #     - 0
+  #     - 0
+  setup:
+    dist: constant
+    params:
+      - 0
+      - 0

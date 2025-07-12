@@ -1,0 +1,11 @@
+# Simulation config
+run_until: 200001
+warmup: 100000
+log_interval: 24
+monitor_warmup: 0
+monitor_interval: 50000
+# Factory config
+delivery_mode: "asReady"
+cb_level: 30.5
+fb_level: 30.5
+
