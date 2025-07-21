@@ -1,16 +1,53 @@
 # Simulation config
-run_until: 200001
-warmup: 10000
-log_interval: 24
-save_queues: True
-monitor_warmup: 0
-monitor_interval: 50000
-# Factory config
-delivery_mode: "instantly"
-# Scheduler config
-scheduler_interval: 48
-order_release_limit: .inf
-ccr_release_limit: False
-cb_target_level: 400
-sb_update: True
+# run_until: 200001
+# warmup: 0
+# log_interval: 24
+# save_queues: True
+# monitor_warmup: 0
+# monitor_interval: 50000
+# # Factory config
+# delivery_mode: "instantly"
+# # Scheduler config
+# scheduler_interval: 48
+# order_release_limit: .inf
+# ccr_release_limit: False
+# cb_target_level: 220
+# sb_update: False
+
+defaults:
+  - _self_
+  - products: products
+  - resources: resources
+
+# Experiment configuration
+experiment:
+  number_of_runs: 1
+  name: "example"
+  save_logs: True
+  exp_seed: 123
+
+# Simulation configuration
+simulation:
+  run_until: 200001
+  warmup: 0
+  monitor_interval: 50000
+  monitor_warmup: 0
+  delivery_mode: "instantly"
+  log_queue: True
+  print_mode: "metrics"
+  # DBR parameters
+  scheduler_interval: 48
+  order_release_limit: .inf
+  ccr_release_limit: False
+  cb_target_level: 220
+  sb_update: False
+
+# Hydra config
+hydra:
+  run:
+    dir: data/experiments/${now:%y%m%d%H%M}_${experiment.name}
+  sweep:
+    dir: data/experiments
+    subdir: ${now:%y%m%d%H%M}_${experiment.name}_${hydra.job.num}
+
 

@@ -1,34 +1,30 @@
-from typing import Tuple, List, Literal, Optional
+from pathlib import Path
+from typing import List, Literal, Optional, Tuple
 
-import pandas as pd
+import hydra
 import numpy as np
-
-from manusim.factory_sim import FactorySimulation
+import pandas as pd
+from manusim.engine.orders import DemandOrder, ProductionOrder
 from manusim.experiment import ExperimentRunner
-from manusim.engine.orders import ProductionOrder, DemandOrder
-from manusim.engine.cli_config import create_experiment_parser
-from manusim.engine.utils import load_yaml
+from manusim.factory_sim import FactorySimulation
+from omegaconf import DictConfig
 
 
 class DBRSimulation(FactorySimulation):
     def __init__(
         self,
-        config,
-        resources,
-        products,
-        save_logs=True,
-        print_mode="metrics",
-        seed=None,
-        queue_order_selection=None,
+        config: dict,
+        resources: dict,
+        products: dict,
+        print_mode="all",
+        seed: int = None,
     ):
         super().__init__(
             config,
             resources,
             products,
-            save_logs,
             print_mode,
             seed,
-            queue_order_selection,
         )
 
         self.order_release_limit = self.config.get("order_release_limit", float("inf"))
@@ -53,7 +49,7 @@ class DBRSimulation(FactorySimulation):
 
     def _create_constraint_buffer(self):
         # Constraint buffers
-        self.constraint_buffer = self.config.get("cb_target_level", float("inf"))
+        self.constraint_buffer = self.cb_target_level
         self.constraint_buffer_level = 0
 
     def _create_shipping_buffers(self):
@@ -100,7 +96,7 @@ class DBRSimulation(FactorySimulation):
         value,
         product: Optional[float] = None,
     ):
-        if self.warmup <= self.env.now and self.save_logs:
+        if self.warmup_finished:
             match variable:
                 case "constraint_buffer_level":
                     self.log_general.constraint_buffer_level.append(
@@ -286,7 +282,7 @@ class DBRSimulation(FactorySimulation):
         ):
             delay = productionOrder.schedule - self.env.now
             yield self.env.timeout(delay)
-        product = productionOrder.product
+        # product = productionOrder.product
         self.constraint_buffer_level += ccr_add
 
         self._log_vars("constraint_buffer_level", value=self.constraint_buffer_level)
@@ -453,51 +449,87 @@ class DBRSimulation(FactorySimulation):
             print("\n")
 
 
-def main():
+@hydra.main(
+    version_base=None,
+    config_path="config",
+    config_name="config",
+)
+def main(cfg: DictConfig):
     """Main execution function."""
-    parser = create_experiment_parser()
-    args = parser.parse_args()
-
-    # Determine paths
-    if args.save_folder is None:
-        raise ValueError("Experiment folder not specified")
-
-    save_folder = args.save_folder
-    config_path = args.config
-    products_path = args.products
-    resources_path = args.resources
-    # Load configurations
-    try:
-        config = load_yaml(config_path)
-        resources_cfg = load_yaml(resources_path)
-        products_cfg = load_yaml(products_path)
-    except FileNotFoundError as e:
-        print(f"Configuration file not found: {e}")
-        return 1
-    except Exception as e:
-        print(f"Error loading configuration: {e}")
-        return 1
-
     sim = DBRSimulation(
-        config=config,
-        resources=resources_cfg,
-        products=products_cfg,
-        save_logs=True,
-        print_mode="metrics",
-        seed=args.exp_seed,
+        config=cfg.simulation,
+        resources=cfg.resources,
+        products=cfg.products,
+        print_mode=cfg.simulation.print_mode,
     )
 
-    # Create and run experiment
-    # try:
     experiment = ExperimentRunner(
         simulation=sim,
-        number_of_runs=args.number_of_runs,
-        save_folder_path=save_folder,
-        run_name=args.name,
-        seed=args.exp_seed,
+        number_of_runs=cfg.experiment.number_of_runs,
+        save_logs=cfg.experiment.save_logs,
+        run_name=cfg.experiment.name,
+        seed=cfg.experiment.exp_seed,
     )
     experiment.run_experiment()
 
 
 if __name__ == "__main__":
     exit(main())
+
+
+# def main():
+#     """Main execution function."""
+#     parser = create_experiment_parser()
+#     args = parser.parse_args()
+
+#     # Determine paths
+#     if args.save_folder is None:
+#         raise ValueError("Experiment folder not specified")
+
+#     save_folder = args.save_folder
+#     if args.config_folder is not None:
+#         config_folder = Path(args.config_folder)
+#         config_path = config_folder / "config.yaml"
+#         products_path = config_folder / "products.yaml"
+#         resources_path = config_folder / "resources.yaml"
+
+#     if args.config:
+#         config_path = args.config
+#     if args.products:
+#         products_path = args.products
+#     if args.resources:
+#         resources_path = args.resources
+#     try:
+#         config = load_yaml(config_path)
+#         resources_cfg = load_yaml(resources_path)
+#         products_cfg = load_yaml(products_path)
+#     except FileNotFoundError as e:
+#         print(f"Configuration file not found: {e}")
+#         return 1
+#     except Exception as e:
+#         print(f"Error loading configuration: {e}")
+#         return 1
+
+#     sim = DBRSimulation(
+#         config=config,
+#         resources=resources_cfg,
+#         products=products_cfg,
+#         save_logs=True,
+#         print_mode="metrics",
+#         seed=args.exp_seed,
+#     )
+
+#     # Create and run experiment
+#     # try:
+#     experiment = ExperimentRunner(
+#         simulation=sim,
+#         number_of_runs=args.number_of_runs,
+#         save_folder_path=save_folder,
+#         run_name=args.name,
+#         seed=args.exp_seed,
+#     )
+#     experiment.run_experiment()
+
+
+# if __name__ == "__main__":
+#     exit(main())
