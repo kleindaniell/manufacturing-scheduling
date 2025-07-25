@@ -1,11 +1,32 @@
-# Simulation config
-run_until: 200001
-warmup: 100000
-log_interval: 24
-monitor_warmup: 0
-monitor_interval: 50000
-# Factory config
-delivery_mode: "asReady"
-cb_level: 30.5
-fb_level: 30.5
+defaults:
+  - _self_
+  - products: products
+  - resources: resources
 
+# Experiment configuration
+experiment:
+  number_of_runs: 33
+  name: "article"
+  save_logs: True
+  exp_seed: 123
+
+# Simulation configuration
+simulation:
+  run_until: 200001
+  warmup: 100000
+  monitor_interval: 50000
+  monitor_warmup: 1
+  delivery_mode: "asReady"
+  log_queue: False
+  print_mode: "metrics"
+  # DBR parameters
+  cb_level: 30.5
+  fb_level: 30.5
+
+# Hydra config
+hydra:
+  run:
+    dir: data/experiments/${now:%y%m%d%H%M}_${experiment.name}
+  sweep:
+    dir: data/experiments
+    subdir: ${now:%y%m%d%H%M}_${experiment.name}_${hydra.job.num}
