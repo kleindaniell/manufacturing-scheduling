@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import List, Literal, Optional, Tuple
 
 import hydra
@@ -27,6 +26,7 @@ class DBRSimulation(FactorySimulation):
             seed,
         )
 
+    def _initiate_custom_env(self):
         self.order_release_limit = self.config.get("order_release_limit", float("inf"))
         self.ccr_release_limit = self.config.get("ccr_release_limit", False)
         self.scheduler_interval = self.config.get("scheduler_interval", 72)

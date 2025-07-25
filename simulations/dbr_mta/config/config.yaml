@@ -23,23 +23,23 @@ defaults:
 experiment:
   number_of_runs: 1
   name: "example"
-  save_logs: True
+  save_logs: False
   exp_seed: 123
 
 # Simulation configuration
 simulation:
   run_until: 200001
-  warmup: 0
-  monitor_interval: 50000
-  monitor_warmup: 0
+  warmup: 100000
+  monitor_interval: 100000
+  monitor_warmup: 100000
   delivery_mode: "instantly"
-  log_queue: True
+  log_queue: False
   print_mode: "metrics"
   # DBR parameters
   scheduler_interval: 48
   order_release_limit: .inf
   ccr_release_limit: False
-  cb_target_level: 220
+  cb_target_level: 350
   sb_update: False
 
 # Hydra config
