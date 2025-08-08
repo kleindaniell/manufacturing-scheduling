@@ -2,7 +2,7 @@ produto01:
   final_process: p1-07
   raw_material: p1-0
   lot_size_min: 1
-  shipping_buffer: 200 #74
+  shipping_buffer: 300 #74
   processes:
     p1-01:
       deps:
@@ -86,7 +86,7 @@ produto02:
   final_process: p2-08
   raw_material: p2-0
   lot_size_min: 1
-  shipping_buffer: 200 #84
+  shipping_buffer: 300 #84
   processes:
     p2-01:
       deps:
@@ -179,7 +179,7 @@ produto03:
   final_process: p3-08
   raw_material: p3-0
   lot_size_min: 1
-  shipping_buffer: 200 #77
+  shipping_buffer: 300 #77
   processes:
     p3-01:
       deps:
@@ -272,7 +272,7 @@ produto04:
   final_process: p4-08
   raw_material: p4-0
   lot_size_min: 1
-  shipping_buffer: 200 #79
+  shipping_buffer: 300 #79
   processes:
     p4-01:
       deps:
@@ -365,7 +365,7 @@ produto05:
   final_process: p5-08
   raw_material: p5-0
   lot_size_min: 1
-  shipping_buffer: 200 #76
+  shipping_buffer: 300 #76
   processes:
     p5-01:
       deps:
@@ -458,7 +458,7 @@ produto06:
   final_process: p6-08
   raw_material: p6-0
   lot_size_min: 1
-  shipping_buffer: 200 #88
+  shipping_buffer: 300 #88
   processes:
     p6-01:
       deps:
@@ -551,7 +551,7 @@ produto07:
   final_process: p7-08
   raw_material: p7-0
   lot_size_min: 1
-  shipping_buffer: 200 #69
+  shipping_buffer: 300 #69
   processes:
     p7-01:
       deps:
@@ -644,7 +644,7 @@ produto08:
   final_process: p8-12
   raw_material: p8-0
   lot_size_min: 1
-  shipping_buffer: 200 #105
+  shipping_buffer: 300 #105
   processes:
     p8-01:
       deps:
@@ -773,7 +773,7 @@ produto09:
   final_process: p9-13
   raw_material: p9-0
   lot_size_min: 1
-  shipping_buffer: 200 #89
+  shipping_buffer: 300 #89
   processes:
     p9-01:
       deps:
@@ -911,7 +911,7 @@ produto10:
   final_process: p10-13
   raw_material: p10-0
   lot_size_min: 1
-  shipping_buffer: 200 #113
+  shipping_buffer: 300 #113
   processes:
     p10-01:
       deps:
