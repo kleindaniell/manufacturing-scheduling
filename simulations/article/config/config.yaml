@@ -7,7 +7,7 @@ defaults:
 experiment:
   number_of_runs: 33
   name: "article"
-  save_logs: True
+  save_logs: False
   exp_seed: 123
 
 # Simulation configuration

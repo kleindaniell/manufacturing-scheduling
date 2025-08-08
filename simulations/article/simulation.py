@@ -214,6 +214,17 @@ class ArticleSimulation(FactorySimulation):
             print("Empty metrics")
             print("\n")
 
+    def save_custom_metrics(self, save_path):
+        logs_df = self.log_product.to_dataframe()
+        logs_sb = logs_df.loc[
+            logs_df["variable"].isin(
+                ["shipping_buffer_target", "shipping_buffer_level"]
+            )
+        ]
+
+        save_path.mkdir(exist_ok=True, parents=True)
+        logs_sb.to_csv(save_path / "metrics_custom.csv")
+
     def _log_vars(
         self,
         variable: Literal[
