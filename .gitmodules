@@ -1,0 +1,3 @@
+[submodule "submodules/manufacturing-simulation"]
+	path = submodules/manufacturing-simulation
+	url = https://github.com/kleindaniell/manufacturing-simulation.git
