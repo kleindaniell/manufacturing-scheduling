@@ -311,7 +311,10 @@ class DBRSimulation(FactorySimulation):
                 ccr_safe_load = self.scheduler_interval * self.ccr_release_limit
             else:
 
-                self._calculate_constraint_buffer()
+                self.constraint_buffer_level = self._calculate_constraint_buffer()
+                self._log_vars(
+                    "constraint_buffer_level", value=self.constraint_buffer_level
+                )
 
                 ccr_safe_load = self.constraint_buffer - round(
                     self.constraint_buffer_level, 4
@@ -359,8 +362,6 @@ class DBRSimulation(FactorySimulation):
             delay = productionOrder.schedule - self.env.now
             yield self.env.timeout(delay)
         # product = productionOrder.product
-
-        self._log_vars("constraint_buffer_level", value=self.constraint_buffer_level)
 
         self.env.process(self._release_order(productionOrder))
 
