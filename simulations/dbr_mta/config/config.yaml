@@ -28,7 +28,7 @@ simulation:
   buffers_update_warmup: 50000
   sb_update: True
   cb_update: True
-  cb_target_level: 200
+  cb_target_level: 100
   min_lotsize: 0
   max_lotsize: 1
 

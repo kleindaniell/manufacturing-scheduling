@@ -58,6 +58,28 @@ class DBRSimulation(FactorySimulation):
         self.constraint_buffer_level = 0
         self.constraint_buffer_penetration = []
 
+    def _calculate_constraint_buffer(self):
+
+        buffer = 0
+
+        orders: List[ProductionOrder] = self.stores.resource_input[
+            self.constraint_resource
+        ].items
+
+        for order in orders:
+            product = order.product
+            quantity = order.quantity
+            process = order.process_finished
+            process_time_params = self.stores.processes_value_list[product][process][
+                "processing_time"
+            ].get("params")
+
+            buffer += (process_time_params[0] * quantity) + self.ccr_setup_time
+
+        self.constraint_buffer_level = buffer
+
+        return buffer
+
     def _create_shipping_buffers(self):
         # Shipping_buffer
 
@@ -288,6 +310,9 @@ class DBRSimulation(FactorySimulation):
             if self.ccr_release_limit:
                 ccr_safe_load = self.scheduler_interval * self.ccr_release_limit
             else:
+
+                self._calculate_constraint_buffer()
+
                 ccr_safe_load = self.constraint_buffer - round(
                     self.constraint_buffer_level, 4
                 )
@@ -334,7 +359,6 @@ class DBRSimulation(FactorySimulation):
             delay = productionOrder.schedule - self.env.now
             yield self.env.timeout(delay)
         # product = productionOrder.product
-        self.constraint_buffer_level += ccr_add
 
         self._log_vars("constraint_buffer_level", value=self.constraint_buffer_level)
 
