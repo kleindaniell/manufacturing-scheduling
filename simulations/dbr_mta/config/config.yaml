@@ -13,7 +13,7 @@ experiment:
 
 # Simulation configuration
 simulation:
-  run_until: 1000001
+  run_until: 300001
   warmup: 0
   monitor_interval: 100000
   monitor_warmup: 0
@@ -24,10 +24,13 @@ simulation:
   scheduler_interval: 24
   order_release_limit: .inf
   ccr_release_limit: False
-  cb_target_level: 300
-  sb_update: False                                                                                                                                                                                                                                                                    
-  sb_update_multiplyer: 60
+  buffers_update_multiplyer: 90
+  buffers_update_warmup: 50000
+  sb_update: True
+  cb_update: True
+  cb_target_level: 200
   min_lotsize: 0
+  max_lotsize: 1
 
 # Hydra config
 hydra:
