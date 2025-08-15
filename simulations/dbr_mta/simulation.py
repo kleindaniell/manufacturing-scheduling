@@ -31,27 +31,32 @@ class DBRSimulation(FactorySimulation):
         self.ccr_release_limit = self.config.get("ccr_release_limit", False)
         self.scheduler_interval = self.config.get("scheduler_interval", 72)
         self.cb_target_level = self.config.get("cb_target_level", float("inf"))
+        self.min_lotsize = self.config.get("min_lotsize", 0)
+        self.max_lotsize = self.config.get("max_lotsize", 1)
 
         self._create_constraint_buffer()
         self._create_shipping_buffers()
 
     def _start_custom_process(self):
-        self.contraint_resource, self.utilization_df = self.define_constraint()
-        self.env.process(self._update_constraint_buffer(self.contraint_resource))
+        self.constraint_resource, self.utilization_df = self.define_constraint()
+        # self.env.process(self._update_constraint_buffer(self.constraint_resource))
         self.env.process(self._process_demandOrders())
-        # Update finihed goods
+
+        # Update buffers
+        self.buffers_update_multiplyer = self.config.get("buffers_update_multiplyer", 1)
+        self.buffers_update_warmup = self.config.get("buffers_update_warmup", 0)
         self.sb_update: bool = self.config.get("sb_update", False)
-        self.sb_update_multiplyer = self.config.get("sb_update_multiplyer", 1)
         self.cb_update: bool = self.config.get("cb_update", False)
+        self.env.process(self.adjust_buffers())
+
         for product in self.products_config.keys():
             self.env.process(self._update_finished_goods(product))
-            if self.sb_update:
-                self.env.process(self.adjust_shipping_buffer(product))
 
     def _create_constraint_buffer(self):
         # Constraint buffers
         self.constraint_buffer = self.cb_target_level
         self.constraint_buffer_level = 0
+        self.constraint_buffer_penetration = []
 
     def _create_shipping_buffers(self):
         # Shipping_buffer
@@ -178,10 +183,30 @@ class DBRSimulation(FactorySimulation):
 
         utilization_df = df.copy()
         constraint_resource = df.sum().sort_values(ascending=False).index[0]
+
+        ccr_setup_time_params = self.stores.resources[constraint_resource].get(
+            "setup", {"params": None}
+        )
+        self.ccr_setup_time = ccr_setup_time_params.get("params", [0])[0]
+
         return constraint_resource, utilization_df
 
+    def _part_processed(self, product, resource, process):
+        if resource == self.constraint_resource:
+            product_process = self.stores.processes_value_list[product][process]
+            product_processing_time = product_process["processing_time"]["params"][0]
+            ccr_time = product_processing_time
+            self.constraint_buffer_level -= ccr_time
+
+            self._log_vars("constraint_buffer_level", self.constraint_buffer_level)
+
+    def _order_processed(self, productionOrder, resource):
+        if resource == self.constraint_resource:
+            self.constraint_buffer_level -= self.ccr_setup_time
+            self._log_vars("constraint_buffer_level", self.constraint_buffer_level)
+
     def _update_constraint_buffer(self, constraint):
-        ccr_setup_time_params = self.stores.resources[self.contraint_resource].get(
+        ccr_setup_time_params = self.stores.resources[self.constraint_resource].get(
             "setup", {"params": None}
         )
         ccr_setup_time = ccr_setup_time_params.get("params", [0])[0]
@@ -208,7 +233,7 @@ class DBRSimulation(FactorySimulation):
 
     # Start refactor
     def scheduler(self):
-        ccr_setup_time_params = self.stores.resources[self.contraint_resource].get(
+        ccr_setup_time_params = self.stores.resources[self.constraint_resource].get(
             "setup", {"params": None}
         )
         ccr_setup_time = ccr_setup_time_params.get("params", [0])[0]
@@ -219,7 +244,7 @@ class DBRSimulation(FactorySimulation):
                     [
                         process["processing_time"]["params"][0]
                         for process in self.stores.processes_value_list[product]
-                        if process["resource"] == self.contraint_resource
+                        if process["resource"] == self.constraint_resource
                     ]
                 )
 
@@ -230,7 +255,9 @@ class DBRSimulation(FactorySimulation):
                 )
 
                 # Order quantity
-                quantity = max(replenishment, self.config.get("min_lotsize", 0))
+                max_size = round(self.max_lotsize * self.shipping_buffer[product], 0)
+                quantity = max(replenishment, self.min_lotsize)
+                quantity = min(quantity, max_size)
                 self._log_vars("schedule_planned", product=product, value=quantity)
 
                 # Check of need replenishment
@@ -282,7 +309,8 @@ class DBRSimulation(FactorySimulation):
                     ccr_time = (quantity * ccr_time) + ccr_setup_time
 
                     if (
-                        ccr_safe_load > ccr_load_released
+                        ccr_safe_load > 0
+                        and ccr_safe_load > ccr_load_released
                         and orders_released < self.order_release_limit
                         and ccr_accept_orders
                     ):
@@ -295,7 +323,6 @@ class DBRSimulation(FactorySimulation):
 
                 if quantity > 0 and release_order:
                     self.env.process(self.process_order(productionOrder, ccr_time))
-                    # ccr_safe_load -= ccr_time
 
             yield self.env.timeout(self.scheduler_interval)
 
@@ -379,64 +406,106 @@ class DBRSimulation(FactorySimulation):
 
         return
 
-    def adjust_shipping_buffer(self, product):
-        window_analysis = self.scheduler_interval * self.sb_update_multiplyer
-        decrease_interval = self.scheduler_interval * self.sb_update_multiplyer
-        increase_interval = self.scheduler_interval * self.sb_update_multiplyer / 2
-        last_update = 0
+    def adjust_constraint_buffer(self, interval) -> bool:
 
-        # yield self.env.timeout(self.warmup)
+        red_limit = round(self.constraint_buffer * (1 / 3), 2)
+        green_limit = round(self.constraint_buffer * (2 / 3), 2)
+
+        cb_levels = np.array(self.log_general.constraint_buffer_level)
+
+        cb_updated = False
+
+        if cb_levels.shape[0] > 0:
+
+            cb_levels = cb_levels[cb_levels[:, 0] >= interval]
+
+            red_counter = cb_levels[cb_levels[:, 1] < red_limit].shape[0]
+            green_counter = cb_levels[cb_levels[:, 1] > green_limit].shape[0]
+
+            cb_updates = cb_levels.shape[0]
+            print(f"Now: {self.env.now}")
+            print(
+                f"g/r/buffer/level: {green_limit}/{red_limit}/{self.constraint_buffer}/{self.constraint_buffer_level}"
+            )
+            print(f"g/r/t: {green_counter}/{red_counter}/{cb_updates}")
+            if red_counter >= cb_updates * 0.5:
+                self.constraint_buffer += round(self.constraint_buffer * 0.1, 0)
+                cb_updated = True
+
+            elif green_counter == cb_updates:
+                self.constraint_buffer -= 1
+                cb_updated = True
+
+        return cb_updated
+
+    def adjust_shipping_buffer(self, product, interval) -> bool:
+
+        red_penetration = round(self.shipping_buffer[product] * (2 / 3), 2)
+        green_penetration = round(self.shipping_buffer[product] * (1 / 3), 2)
+
+        sb_penetrations = np.array(self.shipping_buffer_penetration[product])
+
+        sb_updated = False
+        if sb_penetrations.shape[0] > 0:
+
+            sb_penetrations = sb_penetrations[sb_penetrations[:, 0] >= interval]
+
+            red_counter = sb_penetrations[
+                sb_penetrations[:, 1] >= red_penetration
+            ].shape[0]
+
+            green_counter = sb_penetrations[
+                sb_penetrations[:, 1] < green_penetration
+            ].shape[0]
+
+            sb_updates = sb_penetrations.shape[0]
+            if red_counter > sb_updates * 0.5:
+                self.shipping_buffer[product] += round(
+                    self.shipping_buffer[product] * 0.1, 0
+                )
+                sb_updated = True
+
+            elif green_counter == sb_updates:
+                self.shipping_buffer[product] -= 1
+                sb_updated = True
+
+        return sb_updated
+
+    def adjust_buffers(self):
+
+        self._log_vars(
+            "constraint_buffer_target",
+            value=self.constraint_buffer,
+        )
+
+        window_analysis = self.scheduler_interval * self.buffers_update_multiplyer
+
+        yield self.env.timeout(self.buffers_update_warmup)
+
         while True:
-            red_penetration = round(self.shipping_buffer[product] * (2 / 3), 2)
-            green_penetration = round(self.shipping_buffer[product] * (1 / 3), 2)
 
-            total_penetrations = np.array(self.shipping_buffer_penetration[product])
-
+            cb_updated = False
             interval = self.env.now - window_analysis
+            if self.cb_update:
+                cb_updated = self.adjust_constraint_buffer(interval)
 
-            if total_penetrations.shape[0] > 0:
-                # self.shipping_buffer_penetration[product] = list(
-                #     filter(
-                #         lambda x: x[0] > interval,
-                #         self.shipping_buffer_penetration[product],
-                #     )
-                # )
-                total_penetrations = total_penetrations[
-                    total_penetrations[:, 0] >= interval
-                ]
+            if not cb_updated and self.sb_update:
+                for product in self.products_config.keys():
+                    self.adjust_shipping_buffer(product, interval)
 
-                red_counter = total_penetrations[
-                    total_penetrations[:, 1] >= red_penetration
-                ].shape[0]
-                green_counter = total_penetrations[
-                    total_penetrations[:, 1] < green_penetration
-                ].shape[0]
-
-                if self.env.now >= last_update + increase_interval and red_counter > (
-                    total_penetrations.shape[0] * 0.5
-                ):
-                    self.shipping_buffer[product] += round(
-                        self.shipping_buffer[product] * 0.1, 0
-                    )
-                    last_update = self.env.now
-
-                elif (
-                    self.env.now >= last_update + decrease_interval
-                    and green_counter == total_penetrations.shape[0]
-                ):
-                    self.shipping_buffer[product] -= round(
-                        self.shipping_buffer[product] * 0.1, 0
-                    )
-                    last_update = self.env.now
-
-                # Log buffer
+            # Log buffers
+            self._log_vars(
+                "constraint_buffer_target",
+                value=self.constraint_buffer,
+            )
+            for product in self.products_config.keys():
                 self._log_vars(
                     "shipping_buffer_target",
                     product=product,
                     value=self.shipping_buffer[product],
                 )
 
-            yield self.env.timeout(self.scheduler_interval)
+            yield self.env.timeout(window_analysis)
 
     def _process_demandOrders(self):
         while True:
