@@ -54,8 +54,10 @@ class DBRSimulation(FactorySimulation):
 
     def _create_constraint_buffer(self):
         # Constraint buffers
-        self.constraint_buffer = self.cb_target_level
+        self.constraint_buffer_target = self.cb_target_level
         self.constraint_buffer_level = 0
+        self.constraint_buffer_wip = 0
+        self.constraint_buffer_queue = 0
         self.constraint_buffer_penetration = []
 
     def _create_shipping_buffers(self):
@@ -87,7 +89,12 @@ class DBRSimulation(FactorySimulation):
                 "schedule_consumed": {p: [] for p in self.products_config.keys()},
                 "schedule_planned": {p: [] for p in self.products_config.keys()},
             },
-            "general": {"constraint_buffer_level": [], "constraint_buffer_target": []},
+            "general": {
+                "constraint_buffer_wip": [],
+                "constraint_buffer_queue": [],
+                "constraint_buffer_level": [],
+                "constraint_buffer_target": [],
+            },
         }
         return custom_logs
 
@@ -108,6 +115,14 @@ class DBRSimulation(FactorySimulation):
                 pass
                 # print(self.log_general.constraint_buffer_level)
             match variable:
+                case "constraint_buffer_wip":
+                    self.log_general.constraint_buffer_wip.append(
+                        (self.env.now, round(value, 4))
+                    )
+                case "constraint_buffer_queue":
+                    self.log_general.constraint_buffer_queue.append(
+                        (self.env.now, round(value, 4))
+                    )
                 case "constraint_buffer_level":
                     self.log_general.constraint_buffer_level.append(
                         (self.env.now, round(value, 4))
@@ -132,31 +147,6 @@ class DBRSimulation(FactorySimulation):
                     self.log_product.schedule_planned[product].append(
                         (self.env.now, value)
                     )
-
-    def _register_custom_logs(self):
-        def register_logs():
-            yield self.env.timeout(self.warmup)
-            while True:
-                self._log_vars(
-                    "constraint_buffer_level", value=self.constraint_buffer_level
-                )
-                self._log_vars("constraint_buffer_target", value=self.constraint_buffer)
-
-                for product in self.products_config:
-                    self._log_vars(
-                        "shipping_buffer_level",
-                        product=product,
-                        value=self.calculate_shipping_buffer(product),
-                    )
-                    self._log_vars(
-                        "shipping_buffer_target",
-                        product=product,
-                        value=self.shipping_buffer[product],
-                    )
-                yield self.env.timeout(self.log_interval)
-
-        # self.env.process(register_logs())
-        pass
 
     def define_constraint(self) -> Tuple[str, pd.DataFrame]:
         df = pd.DataFrame(
@@ -191,37 +181,46 @@ class DBRSimulation(FactorySimulation):
 
         return constraint_resource, utilization_df
 
-    def _part_processed(self, product, resource, process):
+    def _custom_order_in_resource_input(
+        self, productionOrder: ProductionOrder, resource: str
+    ):
+        # Process if constraint ressource
         if resource == self.constraint_resource:
-            product_process = self.stores.processes_value_list[product][process]
-            product_processing_time = product_process["processing_time"]["params"][0]
-            ccr_time = product_processing_time
-            self.constraint_buffer_level -= ccr_time
-
-            self._log_vars("constraint_buffer_level", self.constraint_buffer_level)
-
-    def _order_processed(self, productionOrder, resource):
-        if resource == self.constraint_resource:
-            self.constraint_buffer_level -= self.ccr_setup_time
-            self._log_vars("constraint_buffer_level", self.constraint_buffer_level)
-
-    def _update_constraint_buffer(self, constraint):
-        ccr_setup_time_params = self.stores.resources[self.constraint_resource].get(
-            "setup", {"params": None}
-        )
-        ccr_setup_time = ccr_setup_time_params.get("params", [0])[0]
-        while True:
-            productionOrder: ProductionOrder = yield self.stores.resource_finished[
-                constraint
-            ].get()
             product = productionOrder.product
             quantity = productionOrder.quantity
-            actual_process = productionOrder.process_finished - 1
+            actual_process = productionOrder.process_finished
             product_process = self.stores.processes_value_list[product][actual_process]
             product_processing_time = product_process["processing_time"]["params"][0]
-            ccr_time = product_processing_time * quantity + ccr_setup_time
-            self.constraint_buffer_level -= ccr_time
+            ccr_time = (product_processing_time * quantity) + self.ccr_setup_time
 
+            self.constraint_buffer_wip -= ccr_time
+            self.constraint_buffer_queue += ccr_time
+            self.constraint_buffer_level = (
+                self.constraint_buffer_wip + self.constraint_buffer_queue
+            )
+
+            self._log_vars("constraint_buffer_wip", self.constraint_buffer_wip)
+            self._log_vars("constraint_buffer_queue", self.constraint_buffer_queue)
+            self._log_vars("constraint_buffer_level", self.constraint_buffer_level)
+
+    def _custom_order_out_resource_input(
+        self, productionOrder: ProductionOrder, resource: str
+    ):
+        # Process if constraint ressource
+        if resource == self.constraint_resource:
+            product = productionOrder.product
+            quantity = productionOrder.quantity
+            actual_process = productionOrder.process_finished
+            product_process = self.stores.processes_value_list[product][actual_process]
+            product_processing_time = product_process["processing_time"]["params"][0]
+            ccr_time = (product_processing_time * quantity) + self.ccr_setup_time
+
+            self.constraint_buffer_queue -= ccr_time
+            self.constraint_buffer_level = (
+                self.constraint_buffer_wip + self.constraint_buffer_queue
+            )
+
+            self._log_vars("constraint_buffer_queue", self.constraint_buffer_queue)
             self._log_vars("constraint_buffer_level", self.constraint_buffer_level)
 
     def calculate_shipping_buffer(self, product):
@@ -288,7 +287,7 @@ class DBRSimulation(FactorySimulation):
             if self.ccr_release_limit:
                 ccr_safe_load = self.scheduler_interval * self.ccr_release_limit
             else:
-                ccr_safe_load = self.constraint_buffer - round(
+                ccr_safe_load = self.constraint_buffer_target - round(
                     self.constraint_buffer_level, 4
                 )
 
@@ -333,9 +332,13 @@ class DBRSimulation(FactorySimulation):
         ):
             delay = productionOrder.schedule - self.env.now
             yield self.env.timeout(delay)
-        # product = productionOrder.product
-        self.constraint_buffer_level += ccr_add
 
+        self.constraint_buffer_wip += ccr_add
+        self.constraint_buffer_level = (
+            self.constraint_buffer_wip + self.constraint_buffer_queue
+        )
+
+        self._log_vars("constraint_buffer_wip", value=self.constraint_buffer_wip)
         self._log_vars("constraint_buffer_level", value=self.constraint_buffer_level)
 
         self.env.process(self._release_order(productionOrder))
@@ -388,7 +391,7 @@ class DBRSimulation(FactorySimulation):
 
         return replenishment, penetration
 
-    def process_fg_reduce(self, product):
+    def _custom_fg_reduced(self, product):
         # Update penetration
         if self.env.now >= self.warmup:
             penetration = (
@@ -408,10 +411,10 @@ class DBRSimulation(FactorySimulation):
 
     def adjust_constraint_buffer(self, interval) -> bool:
 
-        red_limit = round(self.constraint_buffer * (1 / 3), 2)
-        green_limit = round(self.constraint_buffer * (2 / 3), 2)
+        red_limit = round(self.constraint_buffer_target * (1 / 3), 2)
+        green_limit = round(self.constraint_buffer_target * (2 / 3), 2)
 
-        cb_levels = np.array(self.log_general.constraint_buffer_level)
+        cb_levels = np.array(self.log_general.constraint_buffer_queue)
 
         cb_updated = False
 
@@ -423,18 +426,24 @@ class DBRSimulation(FactorySimulation):
             green_counter = cb_levels[cb_levels[:, 1] > green_limit].shape[0]
 
             cb_updates = cb_levels.shape[0]
-            print(f"Now: {self.env.now}")
-            print(
-                f"g/r/buffer/level: {green_limit}/{red_limit}/{self.constraint_buffer}/{self.constraint_buffer_level}"
-            )
-            print(f"g/r/t: {green_counter}/{red_counter}/{cb_updates}")
+            
+            
+
             if red_counter >= cb_updates * 0.5:
-                self.constraint_buffer += round(self.constraint_buffer * 0.1, 0)
+                self.constraint_buffer_target += round(
+                    self.constraint_buffer_target * 0.1, 0
+                )
                 cb_updated = True
 
-            elif green_counter == cb_updates:
-                self.constraint_buffer -= 1
+            elif green_counter >= cb_updates * 0.8:
+                self.constraint_buffer_target -= 1
                 cb_updated = True
+
+            print("==== Constraint Buffer =====")
+            print(
+                f"target/level: {self.constraint_buffer_target}/{self.constraint_buffer_level:.0f}"
+            )
+            print(f"g/r/t: {green_counter}/{red_counter}/{cb_updates}")
 
         return cb_updated
 
@@ -475,7 +484,7 @@ class DBRSimulation(FactorySimulation):
 
         self._log_vars(
             "constraint_buffer_target",
-            value=self.constraint_buffer,
+            value=self.constraint_buffer_target,
         )
 
         window_analysis = self.scheduler_interval * self.buffers_update_multiplyer
@@ -483,6 +492,8 @@ class DBRSimulation(FactorySimulation):
         yield self.env.timeout(self.buffers_update_warmup)
 
         while True:
+
+            print(f"==== {self.env.now:.2f} ====")
 
             cb_updated = False
             interval = self.env.now - window_analysis
@@ -492,11 +503,13 @@ class DBRSimulation(FactorySimulation):
             if not cb_updated and self.sb_update:
                 for product in self.products_config.keys():
                     self.adjust_shipping_buffer(product, interval)
+                
+                print(" | ".join([str(self.shipping_buffer[p]) for p in self.products_config.keys()]))
 
             # Log buffers
             self._log_vars(
                 "constraint_buffer_target",
-                value=self.constraint_buffer,
+                value=self.constraint_buffer_target,
             )
             for product in self.products_config.keys():
                 self._log_vars(

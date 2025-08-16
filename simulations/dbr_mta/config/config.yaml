@@ -13,7 +13,7 @@ experiment:
 
 # Simulation configuration
 simulation:
-  run_until: 300001
+  run_until: 2000001
   warmup: 0
   monitor_interval: 100000
   monitor_warmup: 0
@@ -25,10 +25,10 @@ simulation:
   order_release_limit: .inf
   ccr_release_limit: False
   buffers_update_multiplyer: 90
-  buffers_update_warmup: 50000
+  buffers_update_warmup: 20000
   sb_update: True
   cb_update: True
-  cb_target_level: 200
+  cb_target_level: 260
   min_lotsize: 0
   max_lotsize: 1
 
