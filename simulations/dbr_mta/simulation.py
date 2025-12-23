@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import List, Literal, Optional, Tuple
 
 import hydra
@@ -6,7 +7,22 @@ import pandas as pd
 from manusim.engine.orders import DemandOrder, ProductionOrder
 from manusim.experiment import ExperimentRunner
 from manusim.factory_sim import FactorySimulation
+from manusim.metrics import AggMethod, ExperimentMetrics, MetricParams
 from omegaconf import DictConfig
+
+
+class DBRproducts(Enum):
+    shippingBufferLevel = MetricParams(AggMethod.mean, False)
+    shippingBufferTarget = MetricParams(AggMethod.mean, False)
+    scheduleConsumed = MetricParams(AggMethod.mean, False)
+    schedulePlanned = MetricParams(AggMethod.mean, False)
+
+
+class DBRgeneral(Enum):
+    constraintBufferWip = MetricParams(AggMethod.mean, False)
+    constraintBufferQueue = MetricParams(AggMethod.mean, False)
+    constraintBufferLevel = MetricParams(AggMethod.mean, False)
+    constraintBufferTarget = MetricParams(AggMethod.mean, False)
 
 
 class DBRSimulation(FactorySimulation):
@@ -82,31 +98,16 @@ class DBRSimulation(FactorySimulation):
         yield self.stores.finished_goods[product].put(qnt)
 
     def _create_custom_logs(self):
-        custom_logs = {
-            "products": {
-                "shipping_buffer_level": {p: [] for p in self.products_config.keys()},
-                "shipping_buffer_target": {p: [] for p in self.products_config.keys()},
-                "schedule_consumed": {p: [] for p in self.products_config.keys()},
-                "schedule_planned": {p: [] for p in self.products_config.keys()},
-            },
-            "general": {
-                "constraint_buffer_wip": [],
-                "constraint_buffer_queue": [],
-                "constraint_buffer_level": [],
-                "constraint_buffer_target": [],
-            },
-        }
-        return custom_logs
+
+        for dbr_product in DBRproducts:
+            self.logs.create_log(dbr_product.name, self.products_config.keys())
+
+        for general in DBRgeneral:
+            self.logs.create_log(general.name, ["general"])
 
     def _log_vars(
         self,
-        variable: Literal[
-            "constraint_buffer_level",
-            "constraint_buffer_target",
-            "shipping_buffer_level",
-            "shipping_buffer_target",
-            "schedule_consumed",
-        ],
+        variable,
         value,
         product: Optional[float] = None,
     ):
@@ -199,9 +200,21 @@ class DBRSimulation(FactorySimulation):
                 self.constraint_buffer_wip + self.constraint_buffer_queue
             )
 
-            self._log_vars("constraint_buffer_wip", self.constraint_buffer_wip)
-            self._log_vars("constraint_buffer_queue", self.constraint_buffer_queue)
-            self._log_vars("constraint_buffer_level", self.constraint_buffer_level)
+            self.logs.log(
+                DBRgeneral.constraintBufferWip.name,
+                key="general",
+                value=(self.env.now, self.constraint_buffer_wip),
+            )
+            self.logs.log(
+                DBRgeneral.constraintBufferQueue.name,
+                key="general",
+                value=(self.env.now, self.constraint_buffer_queue),
+            )
+            self.logs.log(
+                DBRgeneral.constraintBufferLevel.name,
+                key="general",
+                value=(self.env.now, self.constraint_buffer_level),
+            )
 
     def _custom_order_out_resource_input(
         self, productionOrder: ProductionOrder, resource: str
@@ -220,8 +233,16 @@ class DBRSimulation(FactorySimulation):
                 self.constraint_buffer_wip + self.constraint_buffer_queue
             )
 
-            self._log_vars("constraint_buffer_queue", self.constraint_buffer_queue)
-            self._log_vars("constraint_buffer_level", self.constraint_buffer_level)
+            self.logs.log(
+                DBRgeneral.constraintBufferQueue.name,
+                key="general",
+                value=(self.env.now, self.constraint_buffer_queue),
+            )
+            self.logs.log(
+                DBRgeneral.constraintBufferLevel.name,
+                key="general",
+                value=(self.env.now, self.constraint_buffer_level),
+            )
 
     def calculate_shipping_buffer(self, product):
         self.shipping_buffer_level[product] = (
@@ -249,15 +270,21 @@ class DBRSimulation(FactorySimulation):
 
                 replenishment, penetration = self.calculate_replenishment(product)
 
-                self._log_vars(
-                    "schedule_consumed", product=product, value=replenishment
+                self.logs.log(
+                    variable=DBRproducts.scheduleConsumed.name,
+                    key=product,
+                    value=(self.env.now, replenishment),
                 )
 
                 # Order quantity
                 max_size = round(self.max_lotsize * self.shipping_buffer[product], 0)
                 quantity = max(replenishment, self.min_lotsize)
                 quantity = min(quantity, max_size)
-                self._log_vars("schedule_planned", product=product, value=quantity)
+                self.logs.log(
+                    variable=DBRproducts.schedulePlanned.name,
+                    key=product,
+                    value=(self.env.now, quantity),
+                )
 
                 # Check of need replenishment
                 if replenishment <= 0:
@@ -338,8 +365,16 @@ class DBRSimulation(FactorySimulation):
             self.constraint_buffer_wip + self.constraint_buffer_queue
         )
 
-        self._log_vars("constraint_buffer_wip", value=self.constraint_buffer_wip)
-        self._log_vars("constraint_buffer_level", value=self.constraint_buffer_level)
+        self.logs.log(
+            variable=DBRgeneral.constraintBufferWip.name,
+            key="general",
+            value=(self.env.now, self.constraint_buffer_wip),
+        )
+        self.logs.log(
+            variable=DBRgeneral.constraintBufferLevel.name,
+            key="general",
+            value=(self.env.now, self.constraint_buffer_level),
+        )
 
         self.env.process(self._release_order(productionOrder))
 
@@ -393,7 +428,8 @@ class DBRSimulation(FactorySimulation):
 
     def _custom_fg_reduced(self, product):
         # Update penetration
-        if self.env.now >= self.warmup:
+        if self.warmup_finished:
+
             penetration = (
                 self.shipping_buffer[product]
                 - self.stores.finished_goods[product].level
@@ -401,10 +437,11 @@ class DBRSimulation(FactorySimulation):
             self.shipping_buffer_penetration[product].append(
                 [self.env.now, penetration]
             )
-            self._log_vars(
-                "shipping_buffer_level",
-                product=product,
-                value=self.calculate_shipping_buffer(product),
+
+            self.logs.log(
+                variable=DBRproducts.shippingBufferLevel.name,
+                key=product,
+                value=(self.env.now, self.calculate_shipping_buffer(product)),
             )
 
         return
@@ -414,7 +451,9 @@ class DBRSimulation(FactorySimulation):
         red_limit = round(self.constraint_buffer_target * (1 / 3), 2)
         green_limit = round(self.constraint_buffer_target * (2 / 3), 2)
 
-        cb_levels = np.array(self.log_general.constraint_buffer_queue)
+        cb_levels = np.array(
+            self.logs.get_log(DBRgeneral.constraintBufferQueue.name, "general")
+        )
 
         cb_updated = False
 
@@ -426,12 +465,10 @@ class DBRSimulation(FactorySimulation):
             green_counter = cb_levels[cb_levels[:, 1] > green_limit].shape[0]
 
             cb_updates = cb_levels.shape[0]
-            
-            
 
             if red_counter >= cb_updates * 0.5:
                 self.constraint_buffer_target += round(
-                    self.constraint_buffer_target * 0.1, 0
+                    self.constraint_buffer_target * 0.05, 0
                 )
                 cb_updated = True
 
@@ -439,11 +476,11 @@ class DBRSimulation(FactorySimulation):
                 self.constraint_buffer_target -= 1
                 cb_updated = True
 
-            print("==== Constraint Buffer =====")
-            print(
-                f"target/level: {self.constraint_buffer_target}/{self.constraint_buffer_level:.0f}"
-            )
-            print(f"g/r/t: {green_counter}/{red_counter}/{cb_updates}")
+            # print("==== Constraint Buffer =====")
+            # print(
+            #     f"target/level: {self.constraint_buffer_target}/{self.constraint_buffer_level:.0f}"
+            # )
+            # print(f"g/r/t: {green_counter}/{red_counter}/{cb_updates}")
 
         return cb_updated
 
@@ -470,7 +507,7 @@ class DBRSimulation(FactorySimulation):
             sb_updates = sb_penetrations.shape[0]
             if red_counter > sb_updates * 0.5:
                 self.shipping_buffer[product] += round(
-                    self.shipping_buffer[product] * 0.1, 0
+                    self.shipping_buffer[product] * 0.05, 0
                 )
                 sb_updated = True
 
@@ -482,9 +519,10 @@ class DBRSimulation(FactorySimulation):
 
     def adjust_buffers(self):
 
-        self._log_vars(
-            "constraint_buffer_target",
-            value=self.constraint_buffer_target,
+        self.logs.log(
+            variable=DBRgeneral.constraintBufferTarget.name,
+            key="general",
+            value=(self.env.now, self.constraint_buffer_target),
         )
 
         window_analysis = self.scheduler_interval * self.buffers_update_multiplyer
@@ -493,7 +531,7 @@ class DBRSimulation(FactorySimulation):
 
         while True:
 
-            print(f"==== {self.env.now:.2f} ====")
+            # print(f"==== {self.env.now:.2f} ====")
 
             cb_updated = False
             interval = self.env.now - window_analysis
@@ -503,19 +541,27 @@ class DBRSimulation(FactorySimulation):
             if not cb_updated and self.sb_update:
                 for product in self.products_config.keys():
                     self.adjust_shipping_buffer(product, interval)
-                
-                print(" | ".join([str(self.shipping_buffer[p]) for p in self.products_config.keys()]))
+
+                # print(
+                #     " | ".join(
+                #         [
+                #             str(self.shipping_buffer[p])
+                #             for p in self.products_config.keys()
+                #         ]
+                #     )
+                # )
 
             # Log buffers
-            self._log_vars(
-                "constraint_buffer_target",
-                value=self.constraint_buffer_target,
+            self.logs.log(
+                variable=DBRgeneral.constraintBufferTarget.name,
+                key="general",
+                value=(self.env.now, self.constraint_buffer_target),
             )
             for product in self.products_config.keys():
-                self._log_vars(
-                    "shipping_buffer_target",
-                    product=product,
-                    value=self.shipping_buffer[product],
+                self.logs.log(
+                    variable=DBRproducts.shippingBufferTarget.name,
+                    key=product,
+                    value=(self.env.now, self.shipping_buffer[product]),
                 )
 
             yield self.env.timeout(window_analysis)
@@ -526,33 +572,48 @@ class DBRSimulation(FactorySimulation):
             product = demandOrder.product
             yield self.stores.outbound_demand_orders[product].put(demandOrder)
 
-    def save_custom_metrics(self, save_path):
-        logs_df = self.log_product.to_dataframe()
-        logs_sb = logs_df.loc[
-            logs_df["variable"].isin(
-                ["shipping_buffer_target", "shipping_buffer_level"]
+    def dbr_general_metrics(self, saved_logs: bool = False):
+        df_list = []
+        for metric in DBRgeneral:
+            metric_df = self.logs.get_variable_logs(
+                variable=metric.name, saved_logs=saved_logs
             )
-        ]
+            metric_df = metric_df.pivot_table(
+                values="value", index="key", columns="variable", aggfunc="mean"
+            )
+
+            df_list.append(metric_df)
+        return pd.concat(df_list, axis=1)
+
+    def dbr_product_metrics(self, saved_logs: bool = False):
+        df_list = []
+        for metric in DBRproducts:
+            metric_df = self.logs.get_variable_logs(
+                variable=metric.name, saved_logs=saved_logs
+            )
+            metric_df = metric_df.pivot_table(
+                values="value", index="key", columns="variable", aggfunc="mean"
+            )
+
+            df_list.append(metric_df)
+        return pd.concat(df_list, axis=1)
+
+    def save_custom_metrics(self, save_path, saved_logs=False):
+        products_df = self.dbr_product_metrics(saved_logs=saved_logs)
+        general_df = self.dbr_general_metrics(saved_logs=saved_logs)
 
         save_path.mkdir(exist_ok=True, parents=True)
-        logs_sb.to_csv(save_path / "metrics_custom.csv")
+        products_df.to_csv(save_path / "metrics_dbr_product.csv")
+        general_df.to_csv(save_path / "metrics_dbr_general.csv")
 
     def print_custom_metrics(self):
         """Print DBR metrics"""
 
         # Shipping buffer print
         print("DBR - SHIPPING BUFFER:")
-        logs_df = self.log_product.to_dataframe()
-        logs_sb = logs_df.loc[
-            logs_df["variable"].isin(
-                ["shipping_buffer_target", "shipping_buffer_level"]
-            )
-        ]
-        if not logs_sb.empty:
-            logs_sb = logs_sb.pivot_table(
-                values="value", index="product", columns="variable"
-            )
-            print(logs_sb)
+        dbr_product_df = self.dbr_product_metrics()
+        if not dbr_product_df.empty:
+            print(dbr_product_df)
             print("\n")
         else:
             print("Empty metrics")
@@ -560,14 +621,9 @@ class DBRSimulation(FactorySimulation):
 
         # Constraint buffer print
         print("DBR - CONSTRAINT BUFFER:")
-        logs_df = self.log_general.to_dataframe()
-        logs_cb = logs_df.loc[
-            logs_df["variable"].isin(
-                ["constraint_buffer_target", "constraint_buffer_level"]
-            )
-        ]
-        if not logs_cb.empty:
-            print(logs_cb[["variable", "value"]].groupby("variable").mean())
+        dbr_general_df = self.dbr_general_metrics()
+        if not dbr_general_df.empty:
+            print(dbr_general_df)
             print("\n")
         else:
             print("Empty metrics")
@@ -597,64 +653,17 @@ def main(cfg: DictConfig):
     )
     experiment.run_experiment()
 
+    metrics = ExperimentMetrics(experiment.save_folder_path, config=cfg)
+
+    metrics.read_logs()
+    _ =  metrics.calculate_runs_stats()
+    stats_df = metrics.save_stats(0.95, 0.05)
+    print("=" * 50)
+    print("Experiment Stats")
+    print("=" * 50)
+    print(stats_df)
+    print("=" * 50)
+
 
 if __name__ == "__main__":
     exit(main())
-
-
-# def main():
-#     """Main execution function."""
-#     parser = create_experiment_parser()
-#     args = parser.parse_args()
-
-#     # Determine paths
-#     if args.save_folder is None:
-#         raise ValueError("Experiment folder not specified")
-
-#     save_folder = args.save_folder
-#     if args.config_folder is not None:
-#         config_folder = Path(args.config_folder)
-#         config_path = config_folder / "config.yaml"
-#         products_path = config_folder / "products.yaml"
-#         resources_path = config_folder / "resources.yaml"
-
-#     if args.config:
-#         config_path = args.config
-#     if args.products:
-#         products_path = args.products
-#     if args.resources:
-#         resources_path = args.resources
-#     try:
-#         config = load_yaml(config_path)
-#         resources_cfg = load_yaml(resources_path)
-#         products_cfg = load_yaml(products_path)
-#     except FileNotFoundError as e:
-#         print(f"Configuration file not found: {e}")
-#         return 1
-#     except Exception as e:
-#         print(f"Error loading configuration: {e}")
-#         return 1
-
-#     sim = DBRSimulation(
-#         config=config,
-#         resources=resources_cfg,
-#         products=products_cfg,
-#         save_logs=True,
-#         print_mode="metrics",
-#         seed=args.exp_seed,
-#     )
-
-#     # Create and run experiment
-#     # try:
-#     experiment = ExperimentRunner(
-#         simulation=sim,
-#         number_of_runs=args.number_of_runs,
-#         save_folder_path=save_folder,
-#         run_name=args.name,
-#         seed=args.exp_seed,
-#     )
-#     experiment.run_experiment()
-
-
-# if __name__ == "__main__":
-#     exit(main())
