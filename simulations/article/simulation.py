@@ -1,4 +1,5 @@
-from typing import Tuple, Literal, Optional
+from enum import Enum
+from typing import Tuple
 
 import hydra
 import numpy as np
@@ -6,7 +7,18 @@ import pandas as pd
 from manusim.engine.orders import DemandOrder, ProductionOrder
 from manusim.experiment import ExperimentRunner
 from manusim.factory_sim import FactorySimulation
+from manusim.metrics import AggMethod, ExperimentMetrics, MetricParams
 from omegaconf import DictConfig
+
+# TODO: Testar e arrumar simuação do artigo
+class ArticleGeneral(Enum):
+    constraintBufferLevel = MetricParams(AggMethod.mean, False)
+    constraintBufferTarget = MetricParams(AggMethod.mean, False)
+
+
+class ArticleProducts(Enum):
+    shippingBufferLevel = MetricParams(AggMethod.mean, False)
+    shippingBufferTarget = MetricParams(AggMethod.mean, False)
 
 
 class ArticleSimulation(FactorySimulation):
@@ -33,6 +45,7 @@ class ArticleSimulation(FactorySimulation):
     def _start_custom_process(self):
         self.contraint_resource, self.utilization_df = self.define_constraint()
         self.env.process(self._update_constraint_buffer(self.contraint_resource))
+        # self.env.process(self._process_demandOrders())
 
     def _create_constraint_buffer(self):
         # Constraint buffers
@@ -53,14 +66,11 @@ class ArticleSimulation(FactorySimulation):
             self.shipping_buffer_level[product] = 0
 
     def _create_custom_logs(self):
-        custom_logs = {
-            "products": {
-                "shipping_buffer_level": {p: [] for p in self.products_config.keys()},
-                "shipping_buffer_target": {p: [] for p in self.products_config.keys()},
-            },
-            "general": {"constraint_buffer_level": [], "constraint_buffer_target": []},
-        }
-        return custom_logs
+        for general in ArticleGeneral:
+            self.logs.create_log(general.name, ["general"])
+
+        for product in ArticleProducts:
+            self.logs.create_log(product.name, self.products_config.keys())
 
     def define_constraint(self) -> Tuple[str, pd.DataFrame]:
         df = pd.DataFrame(
@@ -102,7 +112,11 @@ class ArticleSimulation(FactorySimulation):
             ccr_time = product_processing_time * quantity
             self.constraint_buffer_level -= ccr_time
 
-            self._log_vars("constraint_buffer_level", self.constraint_buffer_level)
+            self.logs.log(
+                ArticleGeneral.constraintBufferLevel.name,
+                "general",
+                (self.env.now, self.constraint_buffer_level),
+            )
 
     def calculate_shipping_buffer(self, product):
         self.shipping_buffer_level[product] = (
@@ -127,17 +141,7 @@ class ArticleSimulation(FactorySimulation):
             )
 
             if ccr_processing_time > 0:
-                # schedule = (
-                #     duedate
-                #     - (self.shipping_buffer + ccr_processing_time)
-                #     - self.constraint_buffer
-                # )
-
-                buffer_diff = self.constraint_buffer_level - self.constraint_buffer
-                schedule = (
-                    self.env.now + buffer_diff if buffer_diff > 0 else self.env.now
-                )
-
+                schedule = self.env.now - self.shipping_buffer[product] - self.constraint_buffer - ccr_processing_time
             else:
                 schedule = self.env.now
 
@@ -161,103 +165,69 @@ class ArticleSimulation(FactorySimulation):
             yield self.env.timeout(delay)
 
         self.constraint_buffer_level += ccr_processing_time
-        # print(f"=== Release: {self.env.now} -> \n{productionOrder}\n{do}")
         self.env.process(self._release_order(productionOrder))
 
-    def process_fg_reduce(self, product):
-        if self.warmup_finished:
-            self._log_vars(
-                "shipping_buffer_level",
-                product=product,
-                value=self.calculate_shipping_buffer(product),
-            )
-
+    def _custom_fg_reduced(self, product):
+        self.logs.log(
+            ArticleProducts.shippingBufferLevel.name,
+            product,
+            (self.env.now, self.calculate_shipping_buffer(product)),
+        )
         return
 
+    def custom_product_metrics(self, saved_logs: bool = False):
+        df_list = []
+        for metric in ArticleProducts:
+            metric_df = self.logs.get_variable_logs(
+                variable=metric.name, saved_logs=saved_logs
+            )
+            metric_df = metric_df.pivot_table(
+                values="value", index="key", columns="variable", aggfunc="mean"
+            )
+
+            df_list.append(metric_df)
+        return pd.concat(df_list, axis=1)
+
+    def custom_general_metrics(self, saved_logs: bool = False):
+        df_list = []
+        for metric in ArticleGeneral:
+            metric_df = self.logs.get_variable_logs(
+                variable=metric.name, saved_logs=saved_logs
+            )
+            metric_df = metric_df.pivot_table(
+                values="value", index="key", columns="variable", aggfunc="mean"
+            )
+
+            df_list.append(metric_df)
+        return pd.concat(df_list, axis=1)
+
     def print_custom_metrics(self):
-        """Print DBR metrics"""
+        """Print custom metrics"""
+        print("CUSTOM METRICS:")
+        product_df = self.custom_product_metrics()
+        general_df = self.custom_general_metrics()
 
-        # Shipping buffer print
-        print("DBR - SHIPPING BUFFER:")
-        logs_df = self.log_product.to_dataframe()
-        logs_sb = logs_df.loc[
-            logs_df["variable"].isin(
-                ["shipping_buffer_target", "shipping_buffer_level"]
-            )
-        ]
-        if not logs_sb.empty:
-            try:
-                logs_sb = logs_sb.pivot_table(
-                    values="value", index="product", columns="variable"
-                )
-                print(logs_sb)
-                print("\n")
-            except TypeError:
-                print("Empty metrics")
-                print("\n")
-        else:
-            print("Empty metrics")
-            print("\n")
-
-        # Constraint buffer print
-        print("DBR - CONSTRAINT BUFFER:")
-        logs_df = self.log_general.to_dataframe()
-        logs_cb = logs_df.loc[
-            logs_df["variable"].isin(
-                ["constraint_buffer_target", "constraint_buffer_level"]
-            )
-        ]
-        if not logs_cb.empty:
-            print(logs_cb[["variable", "value"]].groupby("variable").mean())
+        if not product_df.empty:
+            print(product_df)
             print("\n")
         else:
             print("Empty metrics")
             print("\n")
 
-    def save_custom_metrics(self, save_path):
-        logs_df = self.log_product.to_dataframe()
-        logs_sb = logs_df.loc[
-            logs_df["variable"].isin(
-                ["shipping_buffer_target", "shipping_buffer_level"]
-            )
-        ]
+        if not general_df.empty:
+            print(general_df)
+            print("\n")
+        else:
+            print("Empty metrics")
+            print("\n")
+
+    def save_custom_metrics(self, save_path, saved_logs=False):
+        products_df = self.custom_product_metrics(saved_logs=saved_logs)
+        general_df = self.custom_general_metrics(saved_logs=saved_logs)
 
         save_path.mkdir(exist_ok=True, parents=True)
-        logs_sb.to_csv(save_path / "metrics_custom.csv")
-
-    def _log_vars(
-        self,
-        variable: Literal[
-            "constraint_buffer_level",
-            "constraint_buffer_target",
-            "shipping_buffer_level",
-            "shipping_buffer_target",
-        ],
-        value,
-        product: Optional[float] = None,
-    ):
-        if self.warmup_finished:
-            match variable:
-                case "constraint_buffer_level":
-                    self.log_general.constraint_buffer_level.append(
-                        (self.env.now, value)
-                    )
-                case "constraint_buffer_target":
-                    self.log_general.constraint_buffer_target.append(
-                        (self.env.now, value)
-                    )
-                case "shipping_buffer_level":
-                    self.log_product.shipping_buffer_level[product].append(
-                        (self.env.now, value)
-                    )
-                case "shipping_buffer_target":
-                    self.log_product.shipping_buffer_target[product].append(
-                        (self.env.now, value)
-                    )
-                case "schedule_consumed":
-                    self.log_product.schedule_consumed[product].append(
-                        (self.env.now, value)
-                    )
+        products_df.to_csv(save_path / "metrics_article_product.csv")
+        general_df.to_csv(save_path / "metrics_article_general.csv")
 
 
 @hydra.main(
@@ -272,6 +242,7 @@ def main(cfg: DictConfig):
         resources=cfg.resources,
         products=cfg.products,
         print_mode=cfg.simulation.print_mode,
+        seed=cfg.experiment.seed,
     )
 
     experiment = ExperimentRunner(
@@ -279,55 +250,19 @@ def main(cfg: DictConfig):
         number_of_runs=cfg.experiment.number_of_runs,
         save_logs=cfg.experiment.save_logs,
         run_name=cfg.experiment.name,
-        seed=cfg.experiment.exp_seed,
+        seed=cfg.experiment.seed,
     )
     experiment.run_experiment()
 
-
-# def main():
-#     """Main execution function."""
-#     parser = create_experiment_parser()
-#     args = parser.parse_args()
-
-#     # Determine paths
-#     if args.save_folder is None:
-#         raise ValueError("Experiment folder not specified")
-
-#     save_folder = args.save_folder
-#     config_path = args.config
-#     products_path = args.products
-#     resources_path = args.resources
-#     # Load configurations
-#     try:
-#         config = load_yaml(config_path)
-#         resources_cfg = load_yaml(resources_path)
-#         products_cfg = load_yaml(products_path)
-#     except FileNotFoundError as e:
-#         print(f"Configuration file not found: {e}")
-#         return 1
-#     except Exception as e:
-#         print(f"Error loading configuration: {e}")
-#         return 1
-
-#     sim = ArticleSimulation(
-#         config=config,
-#         resources=resources_cfg,
-#         products=products_cfg,
-#         save_logs=True,
-#         print_mode="metrics",
-#         seed=args.exp_seed,
-#     )
-
-#     # Create and run experiment
-#     # try:
-#     experiment = ExperimentRunner(
-#         simulation=sim,
-#         number_of_runs=args.number_of_runs,
-#         save_folder_path=save_folder,
-#         run_name=args.name,
-#         seed=args.exp_seed,
-#     )
-#     experiment.run_experiment()
+    metrics = ExperimentMetrics(experiment.save_folder_path, config=cfg)
+    metrics.read_logs()
+    _ = metrics.calculate_runs_stats()
+    stats_df = metrics.save_stats(0.95, 0.05)
+    print("=" * 50)
+    print("Experiment Stats")
+    print("=" * 50)
+    print(stats_df)
+    print("=" * 50)
 
 
 if __name__ == "__main__":

@@ -2,23 +2,25 @@ defaults:
   - _self_
   - products: products
   - resources: resources
+  - override hydra/launcher: joblib
 
 # Experiment configuration
 experiment:
-  number_of_runs: 33
+  number_of_runs: 30
   name: "article"
-  save_logs: False
-  exp_seed: 123
+  save_logs: True
+  seed: 123
 
 # Simulation configuration
 simulation:
   run_until: 200001
   warmup: 100000
   monitor_interval: 50000
-  monitor_warmup: 1
+  monitor_warmup: 0
   delivery_mode: "asReady"
   log_queue: False
   print_mode: "metrics"
+  memory_size: 200000
   # DBR parameters
   cb_level: 30.5
   fb_level: 30.5
@@ -30,3 +32,5 @@ hydra:
   sweep:
     dir: data/experiments
     subdir: ${now:%y%m%d%H%M}_${experiment.name}_${hydra.job.num}
+  launcher:
+    n_jobs: 2
