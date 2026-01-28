@@ -1,0 +1,48 @@
+defaults:
+  - _self_
+  - products: products
+  - resources: resources
+  - override hydra/launcher: joblib
+
+training:
+  name: "training_rldbr"
+  n_envs: 15
+  total_timesteps: 12000000
+  learning_rate: 0.00015
+  batch_size: 2048
+  n_epochs: 15
+  n_steps: 2048
+  verbose: 1
+  tensorboard_log: data/tensorboard_log
+  tb_log_name: ${now:%y%m%d%H%M}_${training.name}
+  model_save_path: simulations/rl_dbr/models/ppo/${now:%y%m%d%H%M}_${training.name}
+
+# Simulation configuration
+environment:
+  run_until: 300000
+  warmup: 0
+  monitor_interval: 5000000
+  monitor_warmup: 5000000
+  delivery_mode: "instantly"
+  log_queues: False
+  print_mode: None
+  memory_size: 10000
+  # Schedule
+  scheduler_interval: 24
+  schedule_max_size: 20
+  training: True
+  wip_multiplyer: 0.002
+  fg_multiplyer: 0.001
+  lost_sales_multiplyer: 0.02
+
+# Hydra config
+hydra:
+  run:
+    dir: data/experiments/${now:%y%m%d%H%M}_${training.name}
+  sweep:
+    dir: data/experiments
+    subdir: ${now:%y%m%d%H%M}_${training.name}_${hydra.job.num}
+  launcher:
+    n_jobs: 1
+
+

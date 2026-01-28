@@ -1,0 +1,38 @@
+defaults:
+  - _self_
+  - products: products
+  - resources: resources
+  - override hydra/launcher: joblib
+
+# Experiment configuration
+experiment:
+  number_of_runs: 1
+  name: "rldbr"
+  save_logs: False
+  seed: 123
+
+# Simulation configuration
+simulation:
+  run_until: 200001
+  warmup: 0
+  monitor_interval: 500000
+  monitor_warmup: 0
+  delivery_mode: "instantly"
+  log_queues: False
+  print_mode: "metrics"
+  # Schedule
+  scheduler_interval: 24
+  training: True
+  model_path: rl_dbr/models/
+
+# Hydra config
+hydra:
+  run:
+    dir: data/experiments/${now:%y%m%d%H%M}_${experiment.name}
+  sweep:
+    dir: data/experiments
+    subdir: ${now:%y%m%d%H%M}_${experiment.name}_${hydra.job.num}
+  launcher:
+    n_jobs: 1
+
+
