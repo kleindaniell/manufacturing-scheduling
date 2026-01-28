@@ -6,7 +6,7 @@ defaults:
 
 # Experiment configuration
 experiment:
-  number_of_runs: 2
+  number_of_runs: 30
   name: "dbr"
   save_logs: True
   seed: 123
