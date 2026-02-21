@@ -22,8 +22,10 @@ simulation:
   print_mode: "metrics"
   # Schedule
   scheduler_interval: 24
-  training: True
-  model_path: rl_dbr/models/
+  training: False
+  model_path: simulations/rl_dbr/models/ppo/2601301556_training_rldbr.zip # TODO: Change "my_model" to your model folder
+  model_name: "best_model"
+  vec_norm_file: simulations/rl_dbr/models/ppo/2601301556_training_rldbr_vecnormalize.pkl
 
 # Hydra config
 hydra:
@@ -34,5 +36,3 @@ hydra:
     subdir: ${now:%y%m%d%H%M}_${experiment.name}_${hydra.job.num}
   launcher:
     n_jobs: 1
-
-

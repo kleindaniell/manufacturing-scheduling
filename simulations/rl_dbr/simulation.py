@@ -1,4 +1,5 @@
 import hydra
+from pathlib import Path
 from environment import DBRLEnv
 from manusim.experiment import ExperimentRunner
 from omegaconf import DictConfig
@@ -11,6 +12,14 @@ from omegaconf import DictConfig
 )
 def main(cfg: DictConfig):
     """Main execution function."""
+    if not cfg.simulation.training:
+        model_dir = Path(cfg.simulation.model_path)
+        model_name = cfg.simulation.get("model_name", "best_model")
+
+        # Configure full paths for model and normalization
+        cfg.simulation.model_file = str(model_dir / f"{model_name}.zip")
+        cfg.simulation.vec_norm_file = str(model_dir / f"{model_name}_vecnormalize.pkl")
+
     env = DBRLEnv(
         config=cfg.simulation,
         resources=cfg.resources,

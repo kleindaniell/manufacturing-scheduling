@@ -3,7 +3,8 @@ import hydra
 from omegaconf import DictConfig
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
+from stable_baselines3.common.callbacks import CheckpointCallback
 
 from environment import DBRLEnv
 
@@ -40,6 +41,16 @@ def main(cfg: DictConfig):
         vec_env_cls=SubprocVecEnv,
     )
 
+    env = VecNormalize(VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.0))
+
+    checkpoint_callback = CheckpointCallback(
+        save_freq=cfg.training.callback_save_freq,          
+        save_path=cfg.training.model_save_path, # Folder to save files
+        name_prefix=cfg.training.callback_model_prefix, # File prefix
+        save_vecnormalize=True,   
+        verbose=1
+    )
+
     model = PPO(
         "MultiInputPolicy",
         env,
@@ -54,9 +65,11 @@ def main(cfg: DictConfig):
     model.learn(
         total_timesteps=cfg.training.total_timesteps,
         tb_log_name=cfg.training.tb_log_name,
+        callback=checkpoint_callback
     )
 
     model.save(cfg.training.model_save_path)
+    env.save(cfg.training.model_save_path + "_vecnormalize.pkl")
 
 
 if __name__ == "__main__":
