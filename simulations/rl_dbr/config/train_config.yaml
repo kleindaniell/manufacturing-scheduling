@@ -6,15 +6,15 @@ defaults:
 
 training:
   name: "training_rldbr"
-  n_envs: 12
-  total_timesteps: 5000000
+  n_envs: 10
+  total_timesteps: 10000000
   learning_rate: 0.0002
   batch_size: 2048
   n_epochs: 5
   n_steps: 2048
   verbose: 1
   callback_model_prefix: "rldbr_model"
-  callback_save_freq: 100000
+  callback_save_freq: 30000
   tensorboard_log: data/tensorboard_log
   tb_log_name: ${now:%y%m%d%H%M}_${training.name}
   model_save_path: simulations/rl_dbr/models/ppo/${now:%y%m%d%H%M}_${training.name}
@@ -33,9 +33,13 @@ environment:
   scheduler_interval: 24
   schedule_max_size: 20
   training: True
-  wip_multiplyer: 0.002
-  fg_multiplyer: 0.001
-  lost_sales_multiplyer: 0.3
+  reward:
+    lost_sales_multiplier: 3.0
+    wip_multiplier: 0.008
+    fg_multiplier: 0.004
+  load_termination_threshold: 3000
+  space_scale_buffer: 100
+  space_scale_products: 50
 
 # Hydra config
 hydra:

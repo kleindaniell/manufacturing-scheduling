@@ -14,18 +14,25 @@ experiment:
 # Simulation configuration
 simulation:
   run_until: 200001
-  warmup: 0
-  monitor_interval: 500000
+  warmup: 100000
+  monitor_interval: 50000
   monitor_warmup: 0
   delivery_mode: "instantly"
   log_queues: False
   print_mode: "metrics"
+  memory_size: 200000
   # Schedule
   scheduler_interval: 24
   training: False
-  model_path: simulations/rl_dbr/models/ppo/2601301556_training_rldbr.zip # TODO: Change "my_model" to your model folder
-  model_name: "best_model"
-  vec_norm_file: simulations/rl_dbr/models/ppo/2601301556_training_rldbr_vecnormalize.pkl
+  space_scale_buffer: 100
+  space_scale_products: 50
+  reward:
+    lost_sales_multiplier: 3.0
+    wip_multiplier: 0.008
+    fg_multiplier: 0.004
+  # Model (used when training: False). Paths are relative to project root or absolute.
+  model_file: simulations\rl_dbr\models\ppo\2602240910_training_rldbr\rldbr_model_5400000_steps.zip
+  # vec_norm_file: simulations\rl_dbr\models\ppo\2602232133_training_rldbr\rldbr_model_vecnormalize_6900000_steps.pkl
 
 # Hydra config
 hydra:

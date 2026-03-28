@@ -5,6 +5,12 @@ from manusim.experiment import ExperimentRunner
 from omegaconf import DictConfig
 
 
+def _resolve_path(path: str, base_dir: Path) -> str:
+    """Resolve path relative to base_dir if not absolute."""
+    p = Path(path)
+    return str(base_dir / p) if not p.is_absolute() else path
+
+
 @hydra.main(
     version_base=None,
     config_path="config",
@@ -13,12 +19,12 @@ from omegaconf import DictConfig
 def main(cfg: DictConfig):
     """Main execution function."""
     if not cfg.simulation.training:
-        model_dir = Path(cfg.simulation.model_path)
-        model_name = cfg.simulation.get("model_name", "best_model")
-
-        # Configure full paths for model and normalization
-        cfg.simulation.model_file = str(model_dir / f"{model_name}.zip")
-        cfg.simulation.vec_norm_file = str(model_dir / f"{model_name}_vecnormalize.pkl")
+        from hydra.utils import get_original_cwd
+        base = Path(get_original_cwd())
+        if cfg.simulation.get("model_file"):
+            cfg.simulation.model_file = _resolve_path(cfg.simulation.model_file, base)
+        if cfg.simulation.get("vec_norm_file"):
+            cfg.simulation.vec_norm_file = _resolve_path(cfg.simulation.vec_norm_file, base)
 
     env = DBRLEnv(
         config=cfg.simulation,

@@ -1,10 +1,12 @@
-import numpy as np
+from pathlib import Path
+
 import hydra
+from hydra.utils import get_original_cwd
 from omegaconf import DictConfig
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
-from stable_baselines3.common.callbacks import CheckpointCallback
+from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 
 from environment import DBRLEnv
 
@@ -34,6 +36,14 @@ def make_env(cfg: DictConfig, rank: int, seed: int = 0):
 )
 def main(cfg: DictConfig):
     """Main execution function."""
+    # Resolve model save path relative to original cwd so checkpoints go to
+    # simulations/rl_dbr/models/ppo/ even when Hydra changes cwd to the run dir.
+    orig_cwd = Path(get_original_cwd())
+    model_save_path = orig_cwd / cfg.training.model_save_path
+    model_save_path.mkdir(parents=True, exist_ok=True)
+
+    vec_step_freq = max(cfg.training.callback_save_freq // cfg.training.n_envs, 1)
+
     env = make_vec_env(
         make_env(cfg, 0),
         n_envs=cfg.training.n_envs,
@@ -41,14 +51,25 @@ def main(cfg: DictConfig):
         vec_env_cls=SubprocVecEnv,
     )
 
-    env = VecNormalize(VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.0))
+    # env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=200.0)
 
     checkpoint_callback = CheckpointCallback(
-        save_freq=cfg.training.callback_save_freq,          
-        save_path=cfg.training.model_save_path, # Folder to save files
-        name_prefix=cfg.training.callback_model_prefix, # File prefix
-        save_vecnormalize=True,   
-        verbose=1
+        save_freq=vec_step_freq,
+        save_path=str(model_save_path),
+        name_prefix=cfg.training.callback_model_prefix,
+        save_vecnormalize=True,
+        verbose=2,
+    )
+
+    eval_env = make_env(cfg, 0)()
+    eval_callback = EvalCallback(
+        eval_env,
+        best_model_save_path=str(model_save_path / "best_model"),
+        log_path=str(model_save_path / "eval_logs"),
+        eval_freq=vec_step_freq,
+        n_eval_episodes=5,
+        deterministic=True,
+        verbose=1,
     )
 
     model = PPO(
@@ -65,11 +86,11 @@ def main(cfg: DictConfig):
     model.learn(
         total_timesteps=cfg.training.total_timesteps,
         tb_log_name=cfg.training.tb_log_name,
-        callback=checkpoint_callback
+        callback=[checkpoint_callback, eval_callback],
     )
 
-    model.save(cfg.training.model_save_path)
-    env.save(cfg.training.model_save_path + "_vecnormalize.pkl")
+    model.save(str(model_save_path))
+    # env.save(str(model_save_path) + "_vecnormalize.pkl")
 
 
 if __name__ == "__main__":
