@@ -388,10 +388,10 @@ class DBRLEnv(FactorySimulation, gym.Env):
         mask = arr[:, 0] >= since_time
         return float(np.sum(arr[mask, 1]))
 
-    def calculate_reward(self, last_interval: float):
+    def calculate_reward(self, last_interval: float) -> Tuple[float, dict]:
         products = self.products_list
         if not products:
-            return 0.0
+            return 0.0, {}
 
         if self.training:
             units_delivered = sum(self.interval_deliveries[p] for p in products)
@@ -415,12 +415,20 @@ class DBRLEnv(FactorySimulation, gym.Env):
         wip_cost = self.wip_multiplier * total_wip
         fg_cost = self.fg_multiplier * total_fg
 
-        return (
-            units_delivered
-            - self.lost_sales_multiplier * lost_sales_units
-            - wip_cost
-            - fg_cost
+        lost_sales_penalty = self.lost_sales_multiplier * lost_sales_units
+        reward_components = {
+            "throughput": float(units_delivered),
+            "lost_sales_penalty": float(lost_sales_penalty),
+            "wip_penalty": float(wip_cost),
+            "fg_penalty": float(fg_cost),
+        }
+        reward = (
+            reward_components["throughput"]
+            - reward_components["lost_sales_penalty"]
+            - reward_components["wip_penalty"]
+            - reward_components["fg_penalty"]
         )
+        return reward, reward_components
 
 
     def reset(self, seed=None, options=None):
@@ -442,8 +450,9 @@ class DBRLEnv(FactorySimulation, gym.Env):
         self.env.run(until=last_interval + self.scheduler_interval)
 
         obs = self._get_obs()
+        reward, reward_components = self.calculate_reward(last_interval)
         info = self._get_info()
-        reward = self.calculate_reward(last_interval)
+        info["reward_components"] = reward_components
         
         terminated = False
         total_load = sum(self.stores.wip[p].level + self.stores.finished_goods[p].level for p in self.products_list)

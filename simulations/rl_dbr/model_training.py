@@ -8,6 +8,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 
+from diagnostics_callback import DiagnosticsCallback
 from environment import DBRLEnv
 
 
@@ -72,6 +73,12 @@ def main(cfg: DictConfig):
         verbose=1,
     )
 
+    diagnostics_cb = DiagnosticsCallback(
+        entropy_n_samples=getattr(
+            cfg.training, "diagnostics_entropy_samples", 512
+        ),
+    )
+
     model = PPO(
         "MultiInputPolicy",
         env,
@@ -86,7 +93,7 @@ def main(cfg: DictConfig):
     model.learn(
         total_timesteps=cfg.training.total_timesteps,
         tb_log_name=cfg.training.tb_log_name,
-        callback=[checkpoint_callback, eval_callback],
+        callback=[checkpoint_callback, eval_callback, diagnostics_cb],
     )
 
     model.save(str(model_save_path))

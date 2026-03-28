@@ -18,6 +18,7 @@ training:
   tensorboard_log: data/tensorboard_log
   tb_log_name: ${now:%y%m%d%H%M}_${training.name}
   model_save_path: simulations/rl_dbr/models/ppo/${now:%y%m%d%H%M}_${training.name}
+  diagnostics_entropy_samples: 512
 
 # Simulation configuration
 environment:
