@@ -5,7 +5,8 @@ from hydra.utils import get_original_cwd
 from omegaconf import DictConfig
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
+from stable_baselines3.common.utils import get_linear_fn
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 
 from diagnostics_callback import DiagnosticsCallback
@@ -52,7 +53,7 @@ def main(cfg: DictConfig):
         vec_env_cls=SubprocVecEnv,
     )
 
-    # env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=200.0)
+    env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=200.0, training=True)
 
     checkpoint_callback = CheckpointCallback(
         save_freq=vec_step_freq,
@@ -62,7 +63,23 @@ def main(cfg: DictConfig):
         verbose=2,
     )
 
-    eval_env = make_env(cfg, 0)()
+    eval_env = make_vec_env(
+        make_env(cfg, 0),
+        n_envs=1,
+        seed=456,
+        vec_env_cls=DummyVecEnv,
+    )
+    eval_env = VecNormalize(
+        eval_env,
+        norm_obs=True,
+        norm_reward=False,
+        clip_obs=200.0,
+        training=False,
+    )
+    # Use the same running obs/reward stats as training so evaluation matches policy inputs.
+    eval_env.obs_rms = env.obs_rms
+    eval_env.ret_rms = env.ret_rms
+
     eval_callback = EvalCallback(
         eval_env,
         best_model_save_path=str(model_save_path / "best_model"),
@@ -79,16 +96,37 @@ def main(cfg: DictConfig):
         ),
     )
 
-    model = PPO(
-        "MultiInputPolicy",
-        env,
-        learning_rate=cfg.training.learning_rate,
+    schedule = getattr(cfg.training, "learning_rate_schedule", "constant")
+    if schedule == "linear":
+        learning_rate = get_linear_fn(
+            float(cfg.training.learning_rate),
+            float(
+                getattr(cfg.training, "learning_rate_end", 1e-5)
+            ),
+            1.0,
+        )
+    else:
+        learning_rate = float(cfg.training.learning_rate)
+
+    policy_net_arch = getattr(cfg.training, "policy_net_arch", None)
+    policy_kwargs = (
+        {"net_arch": [int(x) for x in policy_net_arch]}
+        if policy_net_arch is not None and len(policy_net_arch) > 0
+        else None
+    )
+
+    ppo_kwargs = dict(
+        learning_rate=learning_rate,
         verbose=cfg.training.verbose,
         tensorboard_log=cfg.training.tensorboard_log,
         batch_size=cfg.training.batch_size,
         n_epochs=cfg.training.n_epochs,
         n_steps=cfg.training.n_steps,
     )
+    if policy_kwargs is not None:
+        ppo_kwargs["policy_kwargs"] = policy_kwargs
+
+    model = PPO("MultiInputPolicy", env, **ppo_kwargs)
 
     model.learn(
         total_timesteps=cfg.training.total_timesteps,
@@ -97,7 +135,7 @@ def main(cfg: DictConfig):
     )
 
     model.save(str(model_save_path))
-    # env.save(str(model_save_path) + "_vecnormalize.pkl")
+    env.save(str(model_save_path) + "_vecnormalize.pkl")
 
 
 if __name__ == "__main__":
