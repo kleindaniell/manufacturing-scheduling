@@ -7,8 +7,8 @@ defaults:
 training:
   name: "training_rldbr"
   n_envs: 10
-  total_timesteps: 10000000
-  learning_rate: 0.0005
+  total_timesteps: 15000000
+  learning_rate: 0.001
   learning_rate_schedule: linear
   learning_rate_end: 0.00001
   policy_net_arch: [128, 128]
@@ -17,15 +17,23 @@ training:
   n_steps: 8192
   verbose: 1
   callback_model_prefix: "rldbr_model"
-  callback_save_freq: 200000
+  callback_save_freq: 1000000
+  callback_eval_freq: 500000
   tensorboard_log: data/tensorboard_log
   tb_log_name: ${now:%y%m%d%H%M}_${training.name}
   model_save_path: simulations/rl_dbr/models/ppo/${now:%y%m%d%H%M}_${training.name}
   diagnostics_entropy_samples: 512
+  resume:
+    enabled: True
+    model_file: C:\github\master\manufacturing-scheduling\simulations\rl_dbr\models\ppo\2603282120_training_rldbr.zip
+    vecnormalize_file: C:\github\master\manufacturing-scheduling\simulations\rl_dbr\models\ppo\2603282120_training_rldbr_vecnormalize.pkl
+    reset_num_timesteps: False
+
+
 
 # Simulation configuration
 environment:
-  run_until: 300000
+  run_until: 200000
   warmup: 0
   monitor_interval: 5000000
   monitor_warmup: 5000000
