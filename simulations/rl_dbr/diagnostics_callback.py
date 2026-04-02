@@ -66,6 +66,6 @@ class DiagnosticsCallback(BaseCallback):
                 return
             for i, categorical in enumerate(dists):
                 self.logger.record(
-                    f"policy/entropy/product_{i}",
+                    f"policy/entropy/product_{i+1}",
                     float(categorical.entropy().mean().item()),
                 )

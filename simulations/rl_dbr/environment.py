@@ -355,9 +355,8 @@ class DBRLEnv(FactorySimulation, gym.Env):
                 self.interval_deliveries[product] += quantity
             else:
                 self.lost_sales_count[product] += quantity
-
-        # Call parent method for logging (will be skipped if training due to _log_vars optimization)
-        super()._log_delivery_performance(demand_order)
+        else:
+            super()._log_delivery_performance(demand_order)
 
 
     def _get_obs(self):
