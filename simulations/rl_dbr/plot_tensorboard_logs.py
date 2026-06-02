@@ -1,6 +1,9 @@
 """
 Plot exported TensorBoard scalar CSVs (one plot per file).
 
+Resolves the experiment folder by name (searches data/** recursively, including
+data/experiment and data/experiments).
+
 By default, uses step on x-axis and value on y-axis. You can switch x-axis to
 other columns (for example time_spend) using --x-axis.
 
@@ -36,16 +39,38 @@ def find_repo_root(start: Path) -> Path:
 
 
 def resolve_experiment_dir(repo_root: Path, experiment_name: str) -> Path:
-    candidates = [
-        repo_root / "data" / "experiments" / experiment_name,
-        repo_root / "simulations" / "rl_dbr" / "data" / "experiments" / experiment_name,
+    """Resolve to …/<experiment_name> under data/** (and rl_dbr/data/**), any depth."""
+    search_bases = [
+        repo_root / "data",
+        repo_root / "simulations" / "rl_dbr" / "data",
     ]
-    for c in candidates:
-        if c.is_dir():
-            return c.resolve()
+    matches: list[Path] = []
+    for base in search_bases:
+        if not base.is_dir():
+            continue
+        for p in base.rglob(experiment_name):
+            if p.is_dir() and p.name == experiment_name:
+                matches.append(p.resolve())
+
+    seen: set[Path] = set()
+    unique: list[Path] = []
+    for m in matches:
+        if m not in seen:
+            seen.add(m)
+            unique.append(m)
+
+    if len(unique) == 1:
+        return unique[0]
+    if len(unique) > 1:
+        raise FileNotFoundError(
+            f"Multiple experiment directories named {experiment_name!r} found:\n  "
+            + "\n  ".join(str(p) for p in unique)
+        )
+    tried = "\n  ".join(str(b / experiment_name) for b in search_bases)
     raise FileNotFoundError(
-        "Experiment directory not found. Tried:\n  "
-        + "\n  ".join(str(c) for c in candidates)
+        "Experiment directory not found (searched recursively under data/ and "
+        "simulations/rl_dbr/data/). "
+        f"Expected a folder named {experiment_name!r}. Example direct paths:\n  {tried}"
     )
 
 

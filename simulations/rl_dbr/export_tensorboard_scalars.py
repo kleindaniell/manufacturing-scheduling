@@ -1,8 +1,9 @@
 """
 Export TensorBoard scalar runs for an RL-DBR Hydra experiment to CSV (one file per tag).
 
-Resolves the experiment folder by name, finds matching SB3 log dirs under the
-tensorboard root, and writes CSVs to {experiment_dir}/tensorboard_logs/.
+Resolves the experiment folder by name (searches data/** recursively, including
+data/experiment and data/experiments), finds matching SB3 log dirs under the tensorboard root, and writes CSVs to
+{experiment_dir}/tensorboard_logs/.
 Each CSV includes wall_time plus timestamp (UTC ISO-8601) and time_spend
 (minutes since the earliest scalar event across all exported tags).
 
@@ -37,16 +38,38 @@ def find_repo_root(start: Path) -> Path:
 
 
 def resolve_experiment_dir(repo_root: Path, experiment_name: str) -> Path:
-    candidates = [
-        repo_root / "data" / "experiments" / experiment_name,
-        repo_root / "simulations" / "rl_dbr" / "data" / "experiments" / experiment_name,
+    """Resolve to …/<experiment_name> under data/** (and rl_dbr/data/**), any depth."""
+    search_bases = [
+        repo_root / "data",
+        repo_root / "simulations" / "rl_dbr" / "data",
     ]
-    for c in candidates:
-        if c.is_dir():
-            return c.resolve()
+    matches: list[Path] = []
+    for base in search_bases:
+        if not base.is_dir():
+            continue
+        for p in base.rglob(experiment_name):
+            if p.is_dir() and p.name == experiment_name:
+                matches.append(p.resolve())
+
+    seen: set[Path] = set()
+    unique: list[Path] = []
+    for m in matches:
+        if m not in seen:
+            seen.add(m)
+            unique.append(m)
+
+    if len(unique) == 1:
+        return unique[0]
+    if len(unique) > 1:
+        raise FileNotFoundError(
+            f"Multiple experiment directories named {experiment_name!r} found:\n  "
+            + "\n  ".join(str(p) for p in unique)
+        )
+    tried = "\n  ".join(str(b / experiment_name) for b in search_bases)
     raise FileNotFoundError(
-        "Experiment directory not found. Tried:\n  "
-        + "\n  ".join(str(c) for c in candidates)
+        "Experiment directory not found (searched recursively under data/ and "
+        "simulations/rl_dbr/data/). "
+        f"Expected a folder named {experiment_name!r}. Example direct paths:\n  {tried}"
     )
 
 
