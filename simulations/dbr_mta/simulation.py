@@ -48,7 +48,7 @@ class DBRSimulation(FactorySimulation):
         self.scheduler_interval = self.config.get("scheduler_interval", 72)
         self.cb_target_level = self.config.get("cb_target_level", float("inf"))
         self.min_lotsize = self.config.get("min_lotsize", 0)
-        self.max_lotsize = self.config.get("max_lotsize", 1)
+        self.max_lotsize_multiplyer = self.config.get("max_lotsize_multiplyer", 1)
 
         self._create_constraint_buffer()
         self._create_shipping_buffers()
@@ -277,7 +277,7 @@ class DBRSimulation(FactorySimulation):
                 )
 
                 # Order quantity
-                max_size = round(self.max_lotsize * self.shipping_buffer[product], 0)
+                max_size = round(self.max_lotsize_multiplyer * self.shipping_buffer[product], 0)
                 quantity = max(replenishment, self.min_lotsize)
                 quantity = min(quantity, max_size)
                 self.logs.log(

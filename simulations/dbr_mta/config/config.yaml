@@ -6,41 +6,41 @@ defaults:
 
 # Experiment configuration
 experiment:
-  number_of_runs: 30
+  number_of_runs: 1
   name: "dbr"
   save_logs: True
   seed: 123
 
 # Simulation configuration
 simulation:
-  run_until: 200001
+  run_until: 10000001
   warmup: 100000
-  monitor_interval: 50000
+  monitor_interval: 100000
   monitor_warmup: 0
   delivery_mode: "instantly"
   log_queues: False
   print_mode: "metrics"
   memory_size: 200000
   # DBR parameters
-  scheduler_interval: 24
+  scheduler_interval: 72
   order_release_limit: .inf
   ccr_release_limit: False
   buffers_update_multiplyer: 90
   buffers_update_warmup: 20000
   sb_update: True
-  cb_update: True
-  cb_target_level: 263
+  cb_update: False
+  cb_target_level: 700 #scheduling_2: 4263
   min_lotsize: 0
-  max_lotsize: 1
+  max_lotsize_multiplyer: 1
 
 # Hydra config
 hydra:
   run:
-    dir: data/experiments/${now:%y%m%d%H%M}_${experiment.name}
+    dir: data/experiments/simulation/${now:%y%m%d%H%M}_${experiment.name}
   sweep:
-    dir: data/experiments
+    dir: data/experiments/simulation
     subdir: ${now:%y%m%d%H%M}_${experiment.name}_${hydra.job.num}
   launcher:
-    n_jobs: 2
+    n_jobs: 4
 
 
