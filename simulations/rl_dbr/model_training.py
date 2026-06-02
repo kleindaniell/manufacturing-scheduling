@@ -96,7 +96,8 @@ def main(cfg: DictConfig):
             env,
             norm_obs=True,
             norm_reward=True,
-            clip_obs=200.0,
+            clip_obs=10000.0,
+            clip_reward=10000.0,
             training=True,
         )
 
@@ -118,7 +119,8 @@ def main(cfg: DictConfig):
         eval_env,
         norm_obs=True,
         norm_reward=False,
-        clip_obs=200.0,
+        clip_obs=10000.0,
+        clip_reward=10000.0,
         training=False,
     )
     # Use the same running obs/reward stats as training so evaluation matches policy inputs.
@@ -142,16 +144,22 @@ def main(cfg: DictConfig):
     )
 
     schedule = getattr(cfg.training, "learning_rate_schedule", "constant")
+    learning_rate_start = float(cfg.training.learning_rate)
     if schedule == "linear":
         learning_rate = get_linear_fn(
-            float(cfg.training.learning_rate),
+            learning_rate_start,
             float(
                 getattr(cfg.training, "learning_rate_end", 1e-5)
             ),
             1.0,
         )
     else:
-        learning_rate = float(cfg.training.learning_rate)
+        learning_rate = lambda _: learning_rate_start
+    initial_learning_rate = float(learning_rate(1.0))
+    print(
+        f"Using learning rate schedule={schedule} "
+        f"initial_lr={initial_learning_rate:.10f}"
+    )
 
     policy_net_arch = getattr(cfg.training, "policy_net_arch", None)
     policy_kwargs = (
@@ -177,6 +185,12 @@ def main(cfg: DictConfig):
             env=env,
             tensorboard_log=cfg.training.tensorboard_log,
         )
+        # PPO checkpoints restore optimizer and LR schedule. Re-apply the
+        # configured schedule so resumed runs honor the current config.
+        model.learning_rate = learning_rate
+        model.lr_schedule = learning_rate
+        for param_group in model.policy.optimizer.param_groups:
+            param_group["lr"] = initial_learning_rate
     else:
         model = PPO("MultiInputPolicy", env, **ppo_kwargs)
 

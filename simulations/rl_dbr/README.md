@@ -51,6 +51,31 @@ Or with custom parameters:
 python model_training.py training.n_envs=8 training.total_timesteps=1000000
 ```
 
+### Resume Training
+
+If a run has not converged yet, you can continue training from a checkpoint instead
+of starting over.
+
+Use a matching pair from the same checkpoint save event:
+- PPO checkpoint: `..._steps.zip`
+- VecNormalize stats: `..._steps_vecnormalize.pkl`
+
+Example resume command:
+
+```bash
+python model_training.py \
+  training.resume.enabled=true \
+  training.resume.model_file=simulations/rl_dbr/models/ppo/<run_dir>/rldbr_model_<steps>_steps.zip \
+  training.resume.vecnormalize_file=simulations/rl_dbr/models/ppo/<run_dir>/rldbr_model_<steps>_steps_vecnormalize.pkl \
+  training.total_timesteps=2000000
+```
+
+Notes:
+- `training.total_timesteps` is the additional timesteps to train in this run.
+- `training.resume.reset_num_timesteps=false` (default) keeps timestep continuity in logs.
+- Keep resume hyperparameters compatible with the original run (policy architecture,
+  `n_envs`, rollout shape) for stable continuation.
+
 ### Running a Simulation
 
 To run a simulation with a trained model, use the `simulation.py` script. You need to specify the path to the trained model in the `simulation_config.yaml` or override it from the command line.
@@ -59,4 +84,4 @@ To run a simulation with a trained model, use the `simulation.py` script. You ne
 python simulation.py
 ```
 
-Make sure the `simulation.model_path` in `config/simulation_config.yaml` points to a valid model directory.
+Set `simulation.model_file` (and optionally `simulation.vec_norm_file`) in `config/simulation_config.yaml` to your trained model .zip and VecNormalize .pkl paths.

@@ -37,16 +37,30 @@ class DBRLEnv(FactorySimulation, gym.Env):
         self.scheduler_interval = self.config.get("scheduler_interval", 72)
         self.training = self.config.get("training", False)
         reward_cfg = self.config.get("reward") or {}
+        
+        self.reward_base = reward_cfg.get('reward_base', 0)
+        if self.reward_base is None:
+            self.reward_base = self.config.get('reward_base', 0)
+        
+        self.throughput_multiplier = reward_cfg.get('throughput_multiplier', 1)
+        if self.throughput_multiplier is None:
+            self.throughput_multiplier = self.config.get('throughput_multiplier', 1)
+        
         self.wip_multiplier = reward_cfg.get("wip_multiplier")
         if self.wip_multiplier is None:
             self.wip_multiplier = self.config.get("wip_multiplyer", 0.2)
+        
         self.fg_multiplier = reward_cfg.get("fg_multiplier")
         if self.fg_multiplier is None:
             self.fg_multiplier = self.config.get("fg_multiplyer", 0.1)
+        
         self.lost_sales_multiplier = reward_cfg.get("lost_sales_multiplier")
         if self.lost_sales_multiplier is None:
             self.lost_sales_multiplier = self.config.get("lost_sales_multiplyer", 0.3)
-        self.load_termination_threshold = self.config.get('load_termination_threshold', 0)
+        
+        self.load_wip_termination_threshold = self.config.get('load_wip_termination_threshold', 0)
+        self.lost_sales_termination_threshold = self.config.get('lost_sales_termination_threshold', 0)
+        self.negative_reward_termination = self.config.get('negative_reward_termination', False)
         self.space_scale_buffer = self.config.get('space_scale_buffer', 1)
         self.space_scale_products = self.config.get('space_scale_products', 1)
 
@@ -248,13 +262,13 @@ class DBRLEnv(FactorySimulation, gym.Env):
 
             while True:
                 obs = self._get_obs()
-                print(f'{self.env.now} - OBS:\n{obs}\n')
+                # print(f'{self.env.now} - OBS:\n{obs}\n')
                 if self.vec_normalize:
                     obs = self.vec_normalize.normalize_obs(obs)
-                    print(f'{self.env.now} - OBS normalized:\n{obs}\n')
+                    # print(f'{self.env.now} - OBS normalized:\n{obs}\n')
                 
                 actions, _ = model.predict(obs, deterministic=True)
-                print(f'{self.env.now} - Actions:\n{actions}\n')
+                # print(f'{self.env.now} - Actions:\n{actions}\n')
                 
                 self.apply_actions(actions)
                 yield self.env.timeout(self.scheduler_interval)
@@ -415,13 +429,14 @@ class DBRLEnv(FactorySimulation, gym.Env):
         fg_cost = self.fg_multiplier * total_fg
 
         lost_sales_penalty = self.lost_sales_multiplier * lost_sales_units
+        throughput = units_delivered * self.throughput_multiplier
         reward_components = {
-            "throughput": float(units_delivered),
+            "throughput": float(throughput),
             "lost_sales_penalty": float(lost_sales_penalty),
             "wip_penalty": float(wip_cost),
             "fg_penalty": float(fg_cost),
         }
-        reward = (
+        reward = self.reward_base + (
             reward_components["throughput"]
             - reward_components["lost_sales_penalty"]
             - reward_components["wip_penalty"]
@@ -454,9 +469,15 @@ class DBRLEnv(FactorySimulation, gym.Env):
         info["reward_components"] = reward_components
         
         terminated = False
-        total_load = sum(self.stores.wip[p].level + self.stores.finished_goods[p].level for p in self.products_list)
-        if self.load_termination_threshold > 0 and total_load>=self.load_termination_threshold:
+        if self.lost_sales_termination_threshold > 0 and reward_components["lost_sales_penalty"] > self.lost_sales_termination_threshold:
             terminated = True
+
+        total_load = sum(self.stores.wip[p].level for p in self.products_list)
+        if self.load_wip_termination_threshold > 0 and total_load>=self.load_wip_termination_threshold:
+            terminated = True
+
+        if reward < 0 and self.negative_reward_termination:
+            terminated=True
 
         truncated = self.env.now >= self.run_until
         # print("obs: ", obs)

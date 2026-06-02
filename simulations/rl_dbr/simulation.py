@@ -2,6 +2,7 @@ import hydra
 from pathlib import Path
 from environment import DBRLEnv
 from manusim.experiment import ExperimentRunner
+from manusim.metrics import ExperimentMetrics
 from omegaconf import DictConfig
 
 
@@ -42,6 +43,17 @@ def main(cfg: DictConfig):
     )
     experiment.run_experiment()
 
+    metrics = ExperimentMetrics(experiment.save_folder_path, config=cfg)
+
+    metrics.read_logs()
+    _ = metrics.calculate_runs_stats()
+    stats_df = metrics.save_stats(0.95, 0.05)
+    print("=" * 50)
+    print("Experiment Stats")
+    print("=" * 50)
+    print(stats_df)
+    print("=" * 50)
+
 
 if __name__ == "__main__":
-    main()
+    exit(main())

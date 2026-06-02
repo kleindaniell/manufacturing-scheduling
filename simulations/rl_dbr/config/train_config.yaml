@@ -7,17 +7,17 @@ defaults:
 training:
   name: "training_rldbr"
   n_envs: 10
-  total_timesteps: 15000000
+  total_timesteps: 60000000
   learning_rate: 0.0005
-  learning_rate_schedule: linear
-  learning_rate_end: 0.0001
-  policy_net_arch: [128, 128]
+  learning_rate_schedule: 'linear'
+  learning_rate_end: 0.00005
+  policy_net_arch: [1024, 1024]
   batch_size: 2048
-  n_epochs: 10
+  n_epochs: 5
   n_steps: 8192
   verbose: 1
   callback_model_prefix: "rldbr_model"
-  callback_save_freq: 1000000
+  callback_save_freq: 8000000
   callback_eval_freq: 500000
   tensorboard_log: data/tensorboard_log
   tb_log_name: ${now:%y%m%d%H%M}_${training.name}
@@ -25,8 +25,8 @@ training:
   diagnostics_entropy_samples: 512
   resume:
     enabled: False
-    model_file: C:\github\master\manufacturing-scheduling\simulations\rl_dbr\models\ppo\2603282120_training_rldbr.zip
-    vecnormalize_file: C:\github\master\manufacturing-scheduling\simulations\rl_dbr\models\ppo\2603282120_training_rldbr_vecnormalize.pkl
+    model_file: simulations\rl_dbr\models\ppo\2604282118_training_rldbr.zip
+    vecnormalize_file: simulations\rl_dbr\models\ppo\2604282118_training_rldbr_vecnormalize.pkl
     reset_num_timesteps: False
 
 
@@ -44,23 +44,27 @@ environment:
   print_mode: None
   memory_size: 10000
   # Schedule
-  scheduler_interval: 24
+  scheduler_interval: 48
   schedule_max_size: 20
   training: True
   reward:
-    lost_sales_multiplier: 3.0
-    wip_multiplier: 0.008
-    fg_multiplier: 0.004
-  load_termination_threshold: 3000
-  space_scale_buffer: 100
-  space_scale_products: 50
+    reward_base: 10
+    throughput_multiplier: 0
+    lost_sales_multiplier: 3
+    wip_multiplier: 0.002
+    fg_multiplier: 0.001
+  load_wip_termination_threshold: 0
+  lost_sales_termination_threshold: 0
+  negative_reward_termination: True
+  space_scale_buffer: 1
+  space_scale_products: 1
 
 # Hydra config
 hydra:
   run:
-    dir: data/experiments/${now:%y%m%d%H%M}_${training.name}
+    dir: data/experiments/rl_train/${now:%y%m%d%H%M}_${training.name}
   sweep:
-    dir: data/experiments
+    dir: data/experiments/rl_train
     subdir: ${now:%y%m%d%H%M}_${training.name}_${hydra.job.num}
   launcher:
     n_jobs: 1
