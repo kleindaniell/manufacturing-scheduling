@@ -480,6 +480,9 @@ class DBRSimulation(FactorySimulation):
             # print(
             #     f"target/level: {self.constraint_buffer_target}/{self.constraint_buffer_level:.0f}"
             # )
+            # print(
+            #     f"WIP/Queue: {self.logs.get_last_log_value(DBRgeneral.constraintBufferWip.name,"general")[1]}/{self.logs.get_last_log_value(DBRgeneral.constraintBufferQueue.name,"general")[1]}"
+            # )
             # print(f"g/r/t: {green_counter}/{red_counter}/{cb_updates}")
 
         return cb_updated
@@ -655,8 +658,7 @@ def main(cfg: DictConfig):
 
     metrics = ExperimentMetrics(experiment.save_folder_path, config=cfg)
 
-    metrics.read_logs()
-    _ =  metrics.calculate_runs_stats()
+    metrics.read_runs_metrics()
     stats_df = metrics.save_stats(0.95, 0.05)
     print("=" * 50)
     print("Experiment Stats")
