@@ -1,0 +1,26 @@
+[project]
+name = "manufacturing-scheduling"
+version = "0.1.0"
+description = "Manufacturing scheduling simulations and reinforcement learning experiments"
+requires-python = ">=3.11"
+dependencies = [
+    "gymnasium",
+    "hydra-core",
+    "ipykernel",
+    "manusim",
+    "matplotlib",
+    "omegaconf",
+    "plotly",
+    "pyyaml",
+    "seaborn",
+    "scipy",
+    "simpy",
+    "stable-baselines3",
+    "tensorboard",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+manusim = { path = "submodules/manufacturing-simulation", editable = true }
