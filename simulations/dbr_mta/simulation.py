@@ -5,10 +5,10 @@ import hydra
 import numpy as np
 import pandas as pd
 from manusim.engine.orders import DemandOrder, ProductionOrder
-from manusim.experiment import ExperimentRunner
+from manusim.experiment import ExperimentRunner, make_simulation_factory
 from manusim.factory_sim import FactorySimulation
 from manusim.metrics import AggMethod, ExperimentMetrics, MetricParams
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 
 class DBRproducts(Enum):
@@ -61,7 +61,20 @@ class DBRSimulation(FactorySimulation):
         # Update buffers
         self.buffers_update_multiplyer = self.config.get("buffers_update_multiplyer", 1)
         self.buffers_update_warmup = self.config.get("buffers_update_warmup", 0)
+        self.buffer_analysis_window = (
+            self.config.get("scheduler_interval", 72) * self.buffers_update_multiplyer
+        )
         self.sb_update: bool = self.config.get("sb_update", False)
+        self.sb_red_threshold = self.config.get("sb_red_threshold", 0.5)
+        self.sb_green_threshold = self.config.get("sb_green_threshold", 1.0)
+        self.sb_increase_mode = self.config.get("sb_increase_mode", "factor")
+        self.sb_increase_factor = self.config.get("sb_increase_factor", 0.05)
+        self.sb_increase_units = self.config.get("sb_increase_units", 1)
+        self.sb_decrease_mode = self.config.get("sb_decrease_mode", "units")
+        self.sb_decrease_factor = self.config.get("sb_decrease_factor", 0.05)
+        self.sb_decrease_units = self.config.get("sb_decrease_units", 1)
+        self.sb_max_increase_factor = self.config.get("sb_max_increase_factor", 0.5)
+        self.sb_floor: bool = self.config.get("sb_floor", True)
         self.cb_update: bool = self.config.get("cb_update", False)
         self.env.process(self.adjust_buffers())
 
@@ -83,11 +96,13 @@ class DBRSimulation(FactorySimulation):
             p: self.products_config[p].get("shipping_buffer", 0)
             for p in self.products_config.keys()
         }
+        self.shipping_buffer_initial = dict(self.shipping_buffer)
         self.shipping_buffer_level = {
             p: self.products_config[p].get("shipping_buffer", 0)
             for p in self.products_config.keys()
         }
         self.shipping_buffer_penetration = {p: [] for p in self.products_config.keys()}
+        self.shipping_buffer_floor = {p: 0 for p in self.products_config.keys()}
 
         # for product in self.products_config.keys():
         #     qnt = self.products_config[product].get("shipping_buffer", 0)
@@ -487,36 +502,87 @@ class DBRSimulation(FactorySimulation):
 
         return cb_updated
 
+    def _trim_shipping_buffer_penetration(self, min_time: float) -> None:
+        for entries in self.shipping_buffer_penetration.values():
+            i = next(
+                (j for j, (t, _) in enumerate(entries) if t >= min_time),
+                len(entries),
+            )
+            if i:
+                del entries[:i]
+
+    def _sb_adjust_delta(
+        self, target, mode, factor, units, max_target: Optional[float] = None
+    ) -> int:
+        if mode == "factor":
+            delta = max(1, round(target * factor))
+        elif mode == "units":
+            delta = int(units)
+        else:
+            raise ValueError(
+                f"Unknown SB adjust mode: {mode!r} (expected 'factor' or 'units')"
+            )
+        if max_target is not None:
+            delta = min(delta, max(0, round(max_target - target)))
+        return int(delta)
+
+    def _log_delivery_performance(self, demand_order: DemandOrder) -> None:
+        super()._log_delivery_performance(demand_order)
+        if self.warmup_finished and not demand_order.delivered and self.sb_floor:
+            product = demand_order.product
+            self.shipping_buffer_floor[product] = max(
+                self.shipping_buffer_floor[product],
+                self.shipping_buffer[product] + 1,
+            )
+
     def adjust_shipping_buffer(self, product, interval) -> bool:
 
         red_penetration = round(self.shipping_buffer[product] * (2 / 3), 2)
         green_penetration = round(self.shipping_buffer[product] * (1 / 3), 2)
 
-        sb_penetrations = np.array(self.shipping_buffer_penetration[product])
+        sb_penetrations = [
+            (t, p)
+            for t, p in self.shipping_buffer_penetration[product]
+            if t >= interval
+        ]
 
         sb_updated = False
-        if sb_penetrations.shape[0] > 0:
+        if sb_penetrations:
 
-            sb_penetrations = sb_penetrations[sb_penetrations[:, 0] >= interval]
+            red_counter = sum(1 for _, p in sb_penetrations if p >= red_penetration)
 
-            red_counter = sb_penetrations[
-                sb_penetrations[:, 1] >= red_penetration
-            ].shape[0]
+            green_counter = sum(1 for _, p in sb_penetrations if p < green_penetration)
 
-            green_counter = sb_penetrations[
-                sb_penetrations[:, 1] < green_penetration
-            ].shape[0]
-
-            sb_updates = sb_penetrations.shape[0]
-            if red_counter > sb_updates * 0.5:
-                self.shipping_buffer[product] += round(
-                    self.shipping_buffer[product] * 0.05, 0
+            sb_updates = len(sb_penetrations)
+            if red_counter >= sb_updates * self.sb_red_threshold:
+                max_target = self.shipping_buffer_initial[product] * (
+                    1 + self.sb_max_increase_factor
                 )
-                sb_updated = True
+                delta = self._sb_adjust_delta(
+                    self.shipping_buffer[product],
+                    self.sb_increase_mode,
+                    self.sb_increase_factor,
+                    self.sb_increase_units,
+                    max_target=max_target,
+                )
+                if delta > 0:
+                    self.shipping_buffer[product] += delta
+                    sb_updated = True
 
-            elif green_counter == sb_updates:
-                self.shipping_buffer[product] -= 1
-                sb_updated = True
+            elif green_counter >= sb_updates * self.sb_green_threshold:
+                old = self.shipping_buffer[product]
+                floor = self.shipping_buffer_floor[product] if self.sb_floor else 0
+                self.shipping_buffer[product] = max(
+                    floor,
+                    self.shipping_buffer[product]
+                    - self._sb_adjust_delta(
+                        self.shipping_buffer[product],
+                        self.sb_decrease_mode,
+                        self.sb_decrease_factor,
+                        self.sb_decrease_units,
+                    ),
+                )
+                sb_updated = self.shipping_buffer[product] != old
 
         return sb_updated
 
@@ -528,7 +594,7 @@ class DBRSimulation(FactorySimulation):
             value=(self.env.now, self.constraint_buffer_target),
         )
 
-        window_analysis = self.scheduler_interval * self.buffers_update_multiplyer
+        window_analysis = self.buffer_analysis_window
 
         yield self.env.timeout(self.buffers_update_warmup)
 
@@ -567,6 +633,8 @@ class DBRSimulation(FactorySimulation):
                     value=(self.env.now, self.shipping_buffer[product]),
                 )
 
+            self._trim_shipping_buffer_penetration(interval)
+
             yield self.env.timeout(window_analysis)
 
     def _process_demandOrders(self):
@@ -576,30 +644,18 @@ class DBRSimulation(FactorySimulation):
             yield self.stores.outbound_demand_orders[product].put(demandOrder)
 
     def dbr_general_metrics(self, saved_logs: bool = False):
-        df_list = []
-        for metric in DBRgeneral:
-            metric_df = self.logs.get_variable_logs(
-                variable=metric.name, saved_logs=saved_logs
-            )
-            metric_df = metric_df.pivot_table(
-                values="value", index="key", columns="variable", aggfunc="mean"
-            )
-
-            df_list.append(metric_df)
-        return pd.concat(df_list, axis=1)
+        return self._build_family_metrics(
+            DBRgeneral,
+            ["general"],
+            saved_logs=saved_logs,
+        )
 
     def dbr_product_metrics(self, saved_logs: bool = False):
-        df_list = []
-        for metric in DBRproducts:
-            metric_df = self.logs.get_variable_logs(
-                variable=metric.name, saved_logs=saved_logs
-            )
-            metric_df = metric_df.pivot_table(
-                values="value", index="key", columns="variable", aggfunc="mean"
-            )
-
-            df_list.append(metric_df)
-        return pd.concat(df_list, axis=1)
+        return self._build_family_metrics(
+            DBRproducts,
+            self.products_config.keys(),
+            saved_logs=saved_logs,
+        )
 
     def save_custom_metrics(self, save_path, saved_logs=False):
         products_df = self.dbr_product_metrics(saved_logs=saved_logs)
@@ -640,23 +696,30 @@ class DBRSimulation(FactorySimulation):
 )
 def main(cfg: DictConfig):
     """Main execution function."""
-    sim = DBRSimulation(
-        config=cfg.simulation,
-        resources=cfg.resources,
-        products=cfg.products,
-        print_mode=cfg.simulation.print_mode,
-    )
+    sim_kwargs = {
+        "config": OmegaConf.to_container(cfg.simulation, resolve=True),
+        "resources": OmegaConf.to_container(cfg.resources, resolve=True),
+        "products": OmegaConf.to_container(cfg.products, resolve=True),
+        "print_mode": cfg.simulation.print_mode,
+    }
+    simulation_factory = make_simulation_factory(DBRSimulation, **sim_kwargs)
 
     experiment = ExperimentRunner(
-        simulation=sim,
+        simulation=simulation_factory(),
+        simulation_factory=simulation_factory,
         number_of_runs=cfg.experiment.number_of_runs,
+        n_jobs=cfg.experiment.get("n_jobs", 1),
         save_logs=cfg.experiment.save_logs,
         run_name=cfg.experiment.name,
         seed=cfg.experiment.seed,
     )
     experiment.run_experiment()
 
-    metrics = ExperimentMetrics(experiment.save_folder_path, config=cfg)
+    metrics = ExperimentMetrics(
+        experiment.save_folder_path,
+        config=cfg,
+        custom_metrics=[*DBRproducts, *DBRgeneral],
+    )
 
     metrics.read_runs_metrics()
     stats_df = metrics.save_stats(0.95, 0.05)
