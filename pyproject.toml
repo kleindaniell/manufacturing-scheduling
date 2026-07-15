@@ -17,6 +17,7 @@ dependencies = [
     "simpy",
     "stable-baselines3",
     "tensorboard",
+    "hydra-joblib-launcher>=1.2.0",
 ]
 
 [tool.uv]
@@ -24,3 +25,4 @@ package = false
 
 [tool.uv.sources]
 manusim = { path = "submodules/manufacturing-simulation", editable = true }
+
