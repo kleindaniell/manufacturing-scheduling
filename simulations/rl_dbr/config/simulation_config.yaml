@@ -7,7 +7,8 @@ defaults:
 # Experiment configuration
 experiment:
   number_of_runs: 30
-  name: "rldbr"
+  n_jobs: 4  # parallel runs within one experiment (not Hydra multirun)
+  name: "rldbr_2607062324_9M"
   save_logs: True
   seed: 123
 
@@ -28,11 +29,13 @@ simulation:
   space_scale_products: 1
   reward:
     lost_sales_multiplier: 3.0
-    wip_multiplier: 0.008
-    fg_multiplier: 0.004
+    wip_multiplier: 0.002
+    fg_multiplier: 0.001
   # Model (used when training: False). Paths are relative to project root or absolute.
-  model_file: simulations\rl_dbr\models\ppo\2605150941_training_rldbr.zip
-  vec_norm_file: simulations\rl_dbr\models\ppo\2605150941_training_rldbr_vecnormalize.pkl
+  model_file: simulations/rl_dbr/models/ppo/2607062324_training_rldbr/rldbr_model_9000000_steps.zip
+  # model_file: simulations/rl_dbr/models/ppo/2607081716_training_rldbr.zip
+  vec_norm_file: simulations/rl_dbr/models/ppo/2607062324_training_rldbr/rldbr_model_vecnormalize_9000000_steps.pkl
+  # vec_norm_file: simulations/rl_dbr/models/ppo/2607081716_training_rldbr_vecnormalize.pkl
 
 # Hydra config
 hydra:

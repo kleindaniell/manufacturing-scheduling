@@ -6,19 +6,19 @@ defaults:
 
 training:
   name: "training_rldbr"
-  n_envs: 10
-  total_timesteps: 60000000
-  learning_rate: 0.0005
+  n_envs: 8
+  total_timesteps: 12960000 
+  learning_rate: 0.001
   learning_rate_schedule: 'linear'
-  learning_rate_end: 0.00005
-  policy_net_arch: [1024, 1024]
+  learning_rate_end: 0.0001
+  policy_net_arch: [128, 128]
   batch_size: 2048
   n_epochs: 5
-  n_steps: 8192
+  n_steps: 4096 #8192
   verbose: 1
   callback_model_prefix: "rldbr_model"
-  callback_save_freq: 8000000
-  callback_eval_freq: 500000
+  callback_save_freq: 1440000
+  callback_eval_freq: 720000
   tensorboard_log: data/tensorboard_log
   tb_log_name: ${now:%y%m%d%H%M}_${training.name}
   model_save_path: simulations/rl_dbr/models/ppo/${now:%y%m%d%H%M}_${training.name}
@@ -44,7 +44,7 @@ environment:
   print_mode: None
   memory_size: 10000
   # Schedule
-  scheduler_interval: 48
+  scheduler_interval: 72
   schedule_max_size: 20
   training: True
   reward:
@@ -62,9 +62,9 @@ environment:
 # Hydra config
 hydra:
   run:
-    dir: data/experiments/rl_train/${now:%y%m%d%H%M}_${training.name}
+    dir: data/experiments/rl_dbr_train/${now:%y%m%d%H%M}_${training.name}
   sweep:
-    dir: data/experiments/rl_train
+    dir: data/experiments/rl_dbr_train
     subdir: ${now:%y%m%d%H%M}_${training.name}_${hydra.job.num}
   launcher:
     n_jobs: 1
