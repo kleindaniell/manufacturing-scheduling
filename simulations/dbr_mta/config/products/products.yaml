@@ -2,7 +2,7 @@ produto01:
   final_process: p1-07
   raw_material: p1-0
   lot_size_min: 1
-  shipping_buffer:  71 #300 
+  shipping_buffer: 200 #74 # 72 # 71 #300 
   processes:
     p1-01:
       deps:
@@ -86,7 +86,7 @@ produto02:
   final_process: p2-08
   raw_material: p2-0
   lot_size_min: 1
-  shipping_buffer:  90 #300 
+  shipping_buffer: 200 #89 # 89 # 90 #300 
   processes:
     p2-01:
       deps:
@@ -179,7 +179,7 @@ produto03:
   final_process: p3-08
   raw_material: p3-0
   lot_size_min: 1
-  shipping_buffer:  78 #300
+  shipping_buffer: 200 #77 # 74 # 78 #300
   processes:
     p3-01:
       deps:
@@ -272,7 +272,7 @@ produto04:
   final_process: p4-08
   raw_material: p4-0
   lot_size_min: 1
-  shipping_buffer:  86 #300
+  shipping_buffer: 200 #86 # 82 # 86 #300
   processes:
     p4-01:
       deps:
@@ -365,7 +365,7 @@ produto05:
   final_process: p5-08
   raw_material: p5-0
   lot_size_min: 1
-  shipping_buffer:  69 #300 
+  shipping_buffer: 200 #69 # 66 # 69 #300 
   processes:
     p5-01:
       deps:
@@ -458,7 +458,7 @@ produto06:
   final_process: p6-08
   raw_material: p6-0
   lot_size_min: 1
-  shipping_buffer:  87 #300
+  shipping_buffer: 200 #92 # 90 # 87 #300
   processes:
     p6-01:
       deps:
@@ -551,7 +551,7 @@ produto07:
   final_process: p7-08
   raw_material: p7-0
   lot_size_min: 1
-  shipping_buffer:  75 #300
+  shipping_buffer: 200 #78 # 77 # 75 #300
   processes:
     p7-01:
       deps:
@@ -644,7 +644,7 @@ produto08:
   final_process: p8-12
   raw_material: p8-0
   lot_size_min: 1
-  shipping_buffer:  113 #300
+  shipping_buffer: 200 #114 # 113 # 113 #300
   processes:
     p8-01:
       deps:
@@ -773,7 +773,7 @@ produto09:
   final_process: p9-13
   raw_material: p9-0
   lot_size_min: 1
-  shipping_buffer:  111 #300 
+  shipping_buffer: 200 #115 # 114 # 111 #300 
   processes:
     p9-01:
       deps:
@@ -911,7 +911,7 @@ produto10:
   final_process: p10-13
   raw_material: p10-0
   lot_size_min: 1
-  shipping_buffer: 152 #300
+  shipping_buffer: 200 #155 # 158 #152 #300
   processes:
     p10-01:
       deps:

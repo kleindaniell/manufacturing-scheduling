@@ -6,14 +6,15 @@ defaults:
 
 # Experiment configuration
 experiment:
-  number_of_runs: 1
-  name: "dbr_sb_adjust"
+  number_of_runs: 30
+  n_jobs: 4   # parallel runs within one experiment (not Hydra multirun)
+  name: "dbr_bm_original"
   save_logs: True
   seed: 123
 
 # Simulation configuration
 simulation:
-  run_until: 8000001
+  run_until: 200001
   warmup: 100000
   monitor_interval: 100000
   monitor_warmup: 0
@@ -28,8 +29,18 @@ simulation:
   buffers_update_multiplyer: 90
   buffers_update_warmup: 20000
   sb_update: True
+  sb_red_threshold: 0.5
+  sb_green_threshold: 1.0
+  sb_increase_mode: factor    # factor | units
+  sb_increase_factor: 0.10
+  sb_increase_units: 1
+  sb_decrease_mode: factor     # factor | units
+  sb_decrease_factor: 0.02
+  sb_decrease_units: 1
+  sb_max_increase_factor: 0.5  # cap: initial * (1 + factor)
+  sb_floor: False   # lost-sale floor; False = decrease ignores floor
   cb_update: False
-  cb_target_level: 250 #scheduling_24: 263
+  cb_target_level: 400 #scheduling_24: 263
   min_lotsize: 0
   max_lotsize_multiplyer: 1
 
