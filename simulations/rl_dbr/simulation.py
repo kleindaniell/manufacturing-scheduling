@@ -1,9 +1,9 @@
 import hydra
 from pathlib import Path
 from environment import DBRLEnv
-from manusim.experiment import ExperimentRunner
+from manusim.experiment import ExperimentRunner, make_simulation_factory
 from manusim.metrics import ExperimentMetrics
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 
 def _resolve_path(path: str, base_dir: Path) -> str:
@@ -27,16 +27,19 @@ def main(cfg: DictConfig):
         if cfg.simulation.get("vec_norm_file"):
             cfg.simulation.vec_norm_file = _resolve_path(cfg.simulation.vec_norm_file, base)
 
-    env = DBRLEnv(
-        config=cfg.simulation,
-        resources=cfg.resources,
-        products=cfg.products,
-        print_mode=cfg.simulation.print_mode,
-    )
+    sim_kwargs = {
+        "config": OmegaConf.to_container(cfg.simulation, resolve=True),
+        "resources": OmegaConf.to_container(cfg.resources, resolve=True),
+        "products": OmegaConf.to_container(cfg.products, resolve=True),
+        "print_mode": cfg.simulation.print_mode,
+    }
+    simulation_factory = make_simulation_factory(DBRLEnv, **sim_kwargs)
 
     experiment = ExperimentRunner(
-        simulation=env,
+        simulation=simulation_factory(),
+        simulation_factory=simulation_factory,
         number_of_runs=cfg.experiment.number_of_runs,
+        n_jobs=cfg.experiment.get("n_jobs", 1),
         save_logs=cfg.experiment.save_logs,
         run_name=cfg.experiment.name,
         seed=cfg.experiment.seed,

@@ -132,7 +132,7 @@ def main(cfg: DictConfig):
         # best_model_save_path=str(model_save_path / "best_model"),
         log_path=str(model_save_path / "eval_logs"),
         eval_freq=eval_step_freq,
-        n_eval_episodes=3,
+        n_eval_episodes=10,
         deterministic=True,
         verbose=1,
     )
